@@ -1,0 +1,245 @@
+---
+title: "Lab 10. Logistic Regression and GLM"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+library(dplyr)
+opts_chunk$set(class.output='sh', comment = "",message = FALSE,warning = FALSE)
+```
+
+## Overview
+
+* Logistic regression
+  + `glm(DV ~ IV1 + IV2 + ..., dat, family = "binomial")`: fit the logistic regression model
+
+* Poisson regression
+  + `glm(DV ~ IV1 + IV2 + ..., dat, family = "possion")`: fit the possion regression model
+  
+## Logistic Regression
+
+Today, we will try to predict volunteerism from personality characteristics. 
+
+```{r}
+data("Cowles", package = "carData")
+
+Cowles %>% glimpse
+```
+
+## Exploring Data
+
+\footnotesize
+
+Suppose we hypothesize that higher extraversion is associated with higher rates of volunteering.
+
+We might first calculate summary statistics for each group (volunteer vs. not):
+
+```{r}
+Cowles %>% group_by(volunteer) %>% 
+  summarize(n(), 
+            mean(neuroticism), 
+            mean(extraversion), .groups = "keep")
+```
+
+From these, it seems as if higher extraversion is associated with higher volunteering rates.
+
+
+## Logistic Regression
+
+Let's fit a logistic regression model using with Extraversion as a predictor. 
+
+The command to fit logistic regression is `glm()`. The formula notation is the same as for linear regression, but we need to add the argument `family = binomial` to tell R that we want logistic regression instead of another GLM.
+
+```{r}
+glm1 <- glm(volunteer ~ extraversion, Cowles, 
+            family = binomial)
+```
+
+
+## Logistic Regression
+
+```{r}
+summary(glm1)$coefficients
+```
+
+These results imply the following fitted equation:
+
+$\hat{P}(volunteer) = \frac{1}{1+\exp(-(-1.14 + .07Extraversion))}$
+
+* -1.14 is the logit when Extraversion = 0 (highly introverted): $P = \frac{1}{1 + \exp(-(-1.14))} = .24$
+
+* .07 is the increase in logit (predicted log odds of volunteering) for a one-point increase in Extraversion score
+
+## Odds Ratios
+\small
+```{r}
+summary(glm1)$coefficients
+```
+
+Another way to present the regression coefficients: odds ratio
+
+Interpretation:
+
+* For a 1-unit increase in x1, odds that y = 1 are multiplied by $exp(\hat{b}_1)$
+  + When $x1 = 1, odds = exp(\hat{b}_0 + \hat{b}_1)$
+  + (odds at $x1 = 2$)/(odds at $x1 = 1$) = $exp(\hat{b}_1)$
+
+* $e^{0.07} = 1.068$: For one unit increase in extraversion, the odds of volunteering increase by 1.068. The who are one unit higher on extraversion are 1.068 times as likely to volunteer.
+
+* $e^{-1.139} = 0.32$: 0.32 is the value of the odds of volunteering when extraversion is 0. 
+
+## Classification Accuracy
+\small
+
+To evaluate accuracy, we need to get the fitted value from the model.
+
+```{r}
+fitted1 <- fitted(glm1)
+```
+
+Then, we classify subjects as being predicted to volunteer or not based on a .5 cutoff.
+
+```{r}
+class1 <- ifelse(fitted1 > .5, "pred_yes", "pred_no")
+table(class1, Cowles$volunteer)
+(71 + 765) / (765 + 526 + 59 + 71)
+```
+
+Predictions for this model are only a little bit better than 50%. It seems that a lot of people who do volunteer are being classified as not volunteering. (Perhaps a cutoff other than .5 would do a better job).
+
+## Model Comparison
+
+\footnotesize
+
+To test whether extraversion has "predictive power" associated with it, we conduct a likelihood ratio test comparing `glm1` to the null model (a model with only an intercept).
+
+\scriptsize
+
+```{r}
+anova(glm1, test = "LRT")
+```
+
+\small
+
+Here, we reject the null hypothesis that the null model fits as well as the model with extraversion. Therefore, we retain the model with extraversion as a predictor: $\chi^2(dif, 1) = 22.022, p < .001$.
+
+## Poisson Regression
+
+Poisson regression and negative binomial regression
+
+* Often used for count data
+
+* Particularly useful for data with excessive 0’s
+
+## Exploring Data
+\footnotesize
+In this example, we want to predict number of awards earned by students at one high school with the type of program in which the student was enrolled (e.g., vocational, general or academic) and the score on their final exam in math.
+
+```{r}
+awards <- read.csv("https://stats.idre.ucla.edu/stat/data/poisson_sim.csv")
+awards %>% glimpse
+```
+
+* `num_awards` is the outcome variable and indicates the number of awards earned by students at a high school in a year
+
+* `math` is a continuous predictor variable and represents students’ scores on their math final exam
+
+* `prog` is a categorical predictor variable with three levels indicating the type of program in which the students were enrolled. It is coded as 1 = “General”, 2 = “Academic” and 3 = “Vocational”.
+
+## Poisson Regression
+
+Now, let's check the distribution of `num_awards`
+
+```{r}
+table(awards$num_awards)
+```
+
+
+At this point, we are ready to perform our Poisson model analysis using the `glm` function
+
+\small
+```{r}
+awards$prog <- as.factor(awards$prog)
+glm2 <- glm(num_awards ~ prog + math,data = awards,
+            family = "poisson")
+```
+
+## Model Results
+\footnotesize
+```{r}
+summary(glm2)
+```
+
+## Robust SE estimation
+\footnotesize
+* Cameron and Trivedi (2009) recommended using robust standard errors for the parameter estimates to control for mild violation of the distribution assumption that the variance equals the mean.
+
+* We use R package `sandwich` below to obtain the robust standard errors and calculated the p-values accordingly. 
+
+```{r}
+#install.packages("snadwich")
+library(sandwich)
+```
+
+* Together with the p-values, we have also calculated the 95% confidence interval using the parameter estimates and their robust standard errors.
+
+```{r}
+cov.m1 <- vcovHC(glm2,type = "HC0")
+std.err <- sqrt(diag(cov.m1))
+res <- cbind(estimate = coef(glm2),
+             robustSE = std.err, 
+             p = 2*pnorm(abs(coef(glm2)/std.err),lower.tail = F),
+             LL = coef(glm2) - 1.96 * std.err,
+             UL = coef(glm2) + 1.96 * std.err)
+```
+
+## Robust SE estimation
+
+\footnotesize
+```{r}
+res
+```
+
+## Model Results
+\footnotesize
+
+Now, let's look at the coefficients closely
+```{r}
+glm2$coefficients
+```
+
+* Expected log count (mean log count) when all predictors are 0 is -5.24
+  + Expected count is $exp(-5.24) = 0.005$ when all predictors are 0
+  
+* Expected log count for one-unit incease in `math` is .07. 
+  + As math increase by one-unit, the expected count is $exp(.07) = 1.07$ times larger 
+  
+* The expected log count for academic program inceases by 1.08, compare to general program. 
+  + The expected count for academic program is $exp(1.08) = 2.94$ times larger than general program.
+  
+* The expected log count for vocational program incease by 0.37, compare to general program. 
+  + The expected count for vocational program is $exp(0.37) = 1.45$ times larger than general program. 
+  
+  
+## Model Information
+
+* We can use the residual deviance to perform a goodness of fit test for the overall model. 
+
+* The residual deviance is the difference between the deviance of the current model and the maximum deviance of the ideal model where the predicted values are identical to the observed.
+  + If the residual difference is small enough, the goodness of fit test will not be significant, indicating that the model fits the data.
+  + If the test had been statistically significant, it would indicate that the data do not fit the model well. 
+  
+```{r}
+pchisq(glm2$deviance,glm2$df.residual,lower.tail = F)
+```
+
+The p value is .62, we can conclude that the model fits reasonably well because the goodness-of-fit chi-squared test is not statistically significant. 
+

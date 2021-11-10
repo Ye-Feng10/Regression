@@ -1,0 +1,282 @@
+---
+title: "Lab 7. Transformation"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+opts_chunk$set(class.output='sh', comment = "",message = FALSE)
+```
+
+## Review: Steps in Screening Data
+
+\begin{enumerate}
+  \item Missing data
+  \item Outliers
+  \item Normality
+  \item Liearity 
+  \item Homoscedasiticity
+\end{enumerate}
+
+## Load Data and Packages for Today
+
+```{r}
+library(haven)
+library(tidyverse)
+library(ggplot2)
+dat <- read_sav("dat_bateria.sav")
+```
+
+* Dataset “Bacteria” 
+  + Dependent: $n_t$ = number of surviving bacteria (in 100s);
+  + Independent : $t$ = time units
+  
+## Check for linearity: Scatterplot
+
+Let's fit a linear line first:
+\small
+```{r,fig.height=5}
+ggplot(dat, aes(t, N_t)) + geom_point() +
+        geom_smooth(method=lm,formula = 'y ~ x')
+```
+
+## Check for linearity: Scatterplot
+The data is better represented by a curve than a line:
+\small
+```{r,fig.height=5}
+ggplot(dat, aes(t, N_t)) + geom_point() +
+        geom_smooth(method = 'loess',formula = 'y ~ x')
+```
+
+## Check for linearity: Residual plot
+\footnotesize
+This graph confirms that the original relationship was not linear 
+
+* Recall that this graph should be randomly scattered around 0
+```{r,fig.height=4}
+mod <- lm(N_t ~ t,dat)
+dat <- dat %>% 
+    mutate(residuals = residuals(mod),predicted = predict(mod))
+ggplot(dat, aes(x = predicted, y = residuals)) + geom_point()
+```
+
+## Check for Normality of Errors
+
+* Histogram
+
+\footnotesize
+```{r}
+p_hist <- ggplot(dat) +
+geom_histogram(aes(x = residuals, y = ..density..), bins = 15) + 
+  stat_function(fun = dnorm,
+args = list(mean = mean(dat$residuals), sd = sd(dat$residuals)),
+color = "blue")
+```
+
+* QQ Plots
+
+\footnotesize
+```{r}
+p_qq <- ggplot(dat, aes(sample = residuals)) + 
+  stat_qq() + stat_qq_line()
+```
+
+## Check for Normality of Errors
+
+::: columns
+:::: column
+
+\footnotesize
+Clearly, the residuals are positively skewed.
+
+```{r,echo = FALSE,fig.height=4, fig.width=4}
+p_hist
+```
+
+::::
+:::: column
+
+\footnotesize
+The P-P plot confirms violation of normality.
+```{r,echo = FALSE,fig.height=4, fig.width=4}
+p_qq
+```
+
+::::
+:::
+
+## Check for Homoscedasticity: Residual plot
+No clear sign of the violations of homoscedasticity of variance
+
+\footnotesize
+```{r,echo=TRUE,eval=TRUE,fig.height=5}
+ggplot(dat, aes(t, residuals)) + 
+  geom_point() + 
+  geom_smooth(method = loess, formula = y ~ x)
+```
+
+## Why Transformation?
+
+* Simplify the relationship
+
+* Normalize the residuals
+
+* Eliminate heteroscadasticity
+
+**Note that many nonlinear models cannot be transformed into linear function**
+
+**In a word, we want to use linear regression but the associations between predictors and predicted variable are nonlinear. **
+
+## Log Transformation
+
+It looks as if there is some skewness and potential nonlinearities in these data. Perhaps if we take the natural log of `t`, this variable will be more linearly related to the outcome 
+
+First, define the new variable:
+
+```{r}
+dat <- dat %>% mutate(log_Nt = log(N_t))
+# way2
+dat$l_Nt <- log(dat$N_t)
+```
+
+Natural log transformation: `log()`
+
+## Transformed Data: Model Linearity
+
+Let's look at the scatterplot again:
+\small
+```{r,fig.height=4}
+ggplot(dat, aes(t, log_Nt)) + geom_point() +
+        geom_smooth(method=lm,formula = 'y ~ x')
+```
+
+* Data appears more linear.
+
+## Regression Results Based on Original Variable
+
+Let's check the results of the regression model we fit with the original variable:
+
+\scriptsize
+
+```{r}
+summary(mod)
+```
+
+* **Accoring to $R^2$, $F$ an t-tests, this model has an adequate fit.**
+
+## Regression Results Based on Transformed Variable
+
+Now, let's check the results with transformed variable
+
+\scriptsize
+
+```{r}
+mod1 <- lm(log_Nt ~ t,dat)
+summary(mod1)
+```
+
+## Transformed data: Normality
+
+Check the normality again:
+
+\footnotesize
+
+```{r,fig.height=4}
+dat <- dat %>% 
+    mutate(residuals_t = residuals(mod1),predicted_t = predict(mod1))
+```
+
+::: columns
+:::: column
+
+\footnotesize
+Clearly, the residuals' distribution approaches normality
+
+```{r,echo = FALSE,fig.height=4, fig.width=4}
+ggplot(dat) +
+geom_histogram(aes(x = residuals_t, y = ..density..), bins = 15) + 
+  stat_function(fun = dnorm,
+args = list(mean = mean(dat$residuals_t), sd = sd(dat$residuals_t)),
+color = "blue")
+```
+
+::::
+:::: column
+
+\footnotesize
+The P-P plot confirms the normality assumption.
+```{r,echo = FALSE,fig.height=4, fig.width=4}
+ggplot(dat, aes(sample = residuals_t)) + 
+  stat_qq() + stat_qq_line()
+```
+
+::::
+:::
+
+## Transformed Data: Homoscedasticity of the Errors
+
+\footnotesize
+```{r,echo=TRUE,eval=TRUE,fig.height=5}
+ggplot(dat, aes(t, residuals_t)) + 
+  geom_point() + 
+  geom_smooth(method = loess, formula = y ~ x)
+```
+
+* The residuals are more randomly distributed
+
+## Model
+
+Regression model: 
+\[
+ln(N_t) = \beta_0 + \beta_1*t
+\]
+
+* where $N_t$ is the outcome variable and $t$ is the predictor variables
+
+* we assume that $ln(N_t) \sim t$ is normally distributed
+
+* since the outcome variable is log transformed, we can interpret a regression coefficient, say $\beta_1$, as the expected change in log of $y$ with respect to a one-unit increase $t$.
+
+* but what if we want to know what happens to the outcome variable $y$ itself for a one-unit increase in $t$?
+  + We can interpret the exponentiated regression coefficient, $exp(\beta)$, since exponentiation is the inverse of logarithm function.
+  
+## Regression Results
+
+Regression model: 
+\[
+ln(N_t) = 5.973 - 0.218*t
+\]
+
+* Intercept: 5.973 is the expected value of $log(N_t)$ when $t = 0$
+  + The expected value of $N_t$ when $t = 0$ is the exponentiated value 
+  
+```{r}
+exp(5.973)
+```
+
+* Slope: -0.218 is the expected increase in log of $N_t$ when $t$ increase by one unit
+  + The expected increase in $N_t$ when $t$ increases by one units is exponentiated value
+  
+```{r}
+exp(-0.218)
+```
+
+## Other Transformation 
+
+* Occasionally, we also have some predictor variables being log transformed or that both the outcome variable and some predictor variables are log transformed. 
+
+* The interpretation will be tricky, but it still follows the OLS regression framework. 
+
+* More about interpreting regression coefficients: \url{https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqhow-do-i-interpret-a-regression-model-when-some-variables-are-log-transformed/}
+
+* Depending on theoretical reasons, We sometimes may also use other transformation:
+  + square
+  + square root
+  + exponentiate 

@@ -1,0 +1,329 @@
+---
+title: "Lab 3: Multiple Regression 1"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+opts_chunk$set(class.output='sh', comment = "")
+```
+
+## Packges for Today (Install if Needed)
+
+```{r, message = FALSE}
+library(knitr)
+library(tidyverse)
+library(Hmisc)
+library(psych)
+library(readr)
+```
+
+## Before Running the Analysis
+
+\small
+1. Clear the R environment using the following code. (It is a good idea to begin all R scripts this way.)
+
+```{r, echo = TRUE}
+rm(list = ls())
+```
+
+2. Download the data set from Blackboard. Set your working directory to the folder in which the file is saved. Make sure your Rmd file is also saved in this same folder.
+
+```{r, echo = TRUE}
+setwd("/Volumes/GoogleDrive/My Drive/Regression/Lab 3. Multiple Regression 1")
+```
+
+## Overview
+
+Functions: 
+
+* `cor()`: compute correlation/correlation
++ `cor.test()` & `rcorr()`: conducting correlation hypothesis testing
+
+* `plot()` & `pairwise.panels()`: pairewise scatterplots
+  
+* `lm()`: fit a linear regression model
+
+* `scale()`: standardize a variable
+
+## What is Multiple Regression?
+
+Multiple Regression is a statistical technique for estimating the relationship between **one dependent** variable and **two or more independent** (or predictor) variables.
+
+## The Method
+
+* Like simple (bivariate) regression, multiple regression uses the **ordinary least squares solution** (i.e., describes a line for which the sum of squared differences between the predicted and the actual values of the dependent variable are at a minimum). 
+
+* Multiple regression produces a model that identifies the best weighted combination of independent variables to predict the dependent (or criterion) variable. 
+
+## Why Multiple Regression
+
+* control for the effects of $\underline{third\ variables}$
++ Many research studies aim to establish a relationship between two variables (and independent variable and a dependent variable) 
++ In most research scenarios (especially observational studies), it is impossible to design studies that isolate the effect of one variable 
++ We may want to “control” or “account” for the effects of third variables using **multiple linear regression**
+ 
+* estimate the relative importance of each predictor
+
+* assess the contribution of the combined independent variables to the outcome variable 
+
+
+## The Regression Equation
+
+$$\hat{y} = b_0 + b_1X_1 + \ldots + b_pX_p$$
+$$y = b_0 + b_1X_1 + \ldots + b_pX_p + \epsilon$$
+
+* $x =$ the independent or predictor variables
+* $p$ is the number of predictors
+* $b_0, \ldots,b_p$ are regression coefficients, also called partical regression coefficients
+* $\hat{y}=$ predicted dependent variable
+* $y=$ obserbed dependent variable
+* $\epsilon = y - \hat{y}$: model residuals
+
+## Interpreting Regression Coefficients
+Consider a model with 3 predictors:
+
+$$\hat{y} = b_0 + b_1X_1 + b_2X_2 + b_3X_3$$
+
+*  $b_0$ is the expected value of $y$ if $X_1 = X_2 = X_3 = 0$
+
+*  $b_1$ isthe expected change in $\hat{y}$ for one-unit increase in $X_1$, holding $X_2$ and $X_3$ constant.
+
+*  $b_2$ isthe expected change in $\hat{y}$ for one-unit increase in $X_2$, holding $X_1$ and $X_3$ constant.
+
+*  $b_3$ isthe expected change in $\hat{y}$ for one-unit increase in $X_3$, holding $X_1$ and $X_2$ constant.
+
+## Standarized Regression Coefficients
+
+Regular regression coefficients are in raw unit. Standardized regression coefficients are in standard deviation units
+$$z(\hat{y}) = \beta_1z(X_1) + \beta_2z(X_2) + \beta_3z(X_3)$$
+
+* There is no intercept for standardized model: $\beta_0 = 0$
+
+* $\beta_1$ is the expected change in $z_y$ (in SD units) for one-SD increase  $X_1$, holding $X_2$ and $X_3$ constant.
+
+## Standardized Cofficients
+
+* Unlike regular regression coefficients, standardized coefficients can be compared with each other. That is, since the independent variables are now in the same metric, we can determine their relative ability to predict the dependent variable. 
+
+* Consequently, the independent variable with the largest standardized coefficient can be viewed as having the largest impact on the dependent variable. 
+
+* However, one must be cautious to suggest that one variable has “twice” the effect of another due to various problems such as shared correlation.
+
+## R square and Adjusted R square
+
+* $R^2$ (also called the coefficient of multiple determination) indicates the proportion of variance in $\hat{y}$ accounted by the model
++ Accounted for the liner combination of predictors
+
+* In simple regression, $R^2 = r^2_{xy}$
+
+* Addding more preditors **neccessarily** increases $R^2$.
+
+* The adjusted $R^2$ adjusts for the inlfation in $R^2$ caused by the number of variables in the equation. As the sample size increases above 20 cases per variable, adjustment is less needed.
+
+## The F-Test
+
+* We may want to know whether $R^2$ is significantly greater than 0.
+
+* The null hypothesis is that the combination of the predictors does not contribute to the variance in the dependent variable in the population. 
+
+* Example: $R^2 = .88, F(2,47) = 182.9, p < .001$
+  + The combination of IVs explained 88% of the variance in the DV, which was significantly different from 0.
+
+## The t-Test for regression coefficients
+
+* t-tests are used to test the significance of each regression coefficient in the equation. 
+
+* The null hypothesis is that a predictor’s regression coefficient is effectively equal to zero when the effects of the other predictors are taken into account. 
+
+* The test for the intercept $b_0$ is usually not interesting. 
+
+* In sum, the t-test is used to determine the significance of the regression coefficient and is calculated separately for each: $t_i = \frac{\hat{\beta_i}}{s.e.(\hat{\beta_i})}$
+
+## Which Variables to Include?
+
+* Model building using regression is an art:
+ + We should include (“control for”) relevant predictors
+ + We should also strive for the simplest model possible
+ + Don’t want to include redundant (or nearly redundant) predictors
+ + Need to think carefully about which variables to include – need to be guided by theory
+
+## Cigarette sales example
+\small
+We have decided that we want to study cigarette sales and be able to predict the number of cigarettes sold in a state.
+
+Cigarette data include demographic and cigarette sales data for 50 U.S. states (each row represents a state).
+
+```{r, echo=TRUE,message=FALSE}
+dat <- read_csv("cigarettes.csv")
+dat %>% glimpse
+```
+
+## Cigarette sales example
+
+* `Age`: Median age of a person living in a state
+* `HS`: Percentage of people over 25 years of age in a state who had completed high shcool
+* `Income`: Per capita personal income for a state (income in dollars)
+* `Black`: Percentage of blacks living in a state
+* `Female`: Percentage of females living in a state
+* `Price`: Weighted average price (in cents) of a pack of cigarettes in a state
+* `Sales`: Number of packs of cigarettes sold in a state on a per capita basis
+
+## Multiple Regression
+
+* Supposed based on literature review, we hypothesized that Sales can be well predicted by Income and Price. 
+
+* We first evaluate the linear relationship between the three variables using scatterplots.   
+
+## Pairwise Scatterplots: Base R
+
+Use `plot()` function from basic R:
+
+* `plot()` takes a dataframe as input
+
+* Extracting parts of data use `dplyr::select(variable names)`
+```{r}
+sub <- dat %>% dplyr::select(Sales,Income,Price)
+```
+
+* Or use square braket `data[ , ]` to extract data
+```{r}
+sub1 <- dat[,c("Sales","Income","Price")]
+```
+
+## Pairwise Scatterplots: Base R
+
+Plotting with the subset of `dat`
+```{r, fig.height = 4.5}
+plot(sub)
+```
+
+## Pairwise Scatterplots: Psych Package
+\small
+The function `pairs.panels` [in `psych` package] can be also used to create a scatter plot of matrices, with bivariate scatter plots below the diagonal, histograms on the diagonal, and the Pearson correlation above the diagonal.
+
+```{r, fig.height = 4.5}
+pairs.panels(sub, method = "pearson") # correlation method
+```
+
+## Pairwise Scatterplots: Psych Package
+
+\small
+By default, `pairs.panels` adds an loess smooths line, density plots and correlation ellipses. We can remove those:
+
+\footnotesize
+```{r, fig.height = 4.5}
+pairs.panels(sub,
+             method = "pearson",
+             smooth = FALSE,
+             density = FALSE,
+             ellipses = FALSE) 
+```
+
+Look at the help page of `pairs.panels` to see whatelse can be altered
+
+## Check Pairewise Scatterplots
+
+* We want to look at pairwise scatterplots of our predictor variables so that we can determine visually if any pairs of predictors appear highly correlated. 
+
+* Check for linear relationships between the DV and each of the IVs.  This is an imprecise method, and in this case, it’s difficult to tell. 
+
+* Linear relationships between the IVs may indicate multicollinearity (will investigate later this semester). Here it seems we don’t have this problem. 
+
+## Correlation Matrices
+
+We can calculate the correlation matrix of the three variables using `cor()` which takes the variables of interest as its arguments, similar to `plot()`.
+
+```{r}
+cor(sub)
+```
+
+## Correlations: Hypothesis Test
+
+To do a hypothesis test of the Pearson product-moment (PPM) correlation, use the `cor.test()` function:
+
+* Noticed that the `cor.test()` function need to run for each a pairs of variables.
+
+\footnotesize
+
+```{r,echo=TRUE,eval=TRUE}
+cor.test(sub$Sales,sub$Income)
+```
+
+## Cont.
+
+\footnotesize
+
+```{r}
+cor.test(sub$Sales,sub$Price)
+```
+
+## Correlations: Hypothesis Test
+
+* The function `rcorr()` [in `Hmisc` package] can be used to compute the significance levels for pearson and spearman correlations. It returns both the correlation coefficients and the p-value of the correlation for all possible pairs of columns in the data table.
+
+* Noticed that `rcorr()` function takes a matrix as input, use `as.matrix()` to convert our data `sub` into a matrix format.
+```{r, echo=TRUE,eval=FALSE}
+rcorr(as.matrix(sub), type = c("pearson"))
+```
+
+Output on next page.
+
+## Correlations: Hypothesis Test
+\small
+```{r, echo=TRUE,eval=TRUE}
+rcorr(as.matrix(sub), type = c("pearson"))
+```
+
+## Multiple Regression Model
+
+Next we conducted regression model use `lm()`, get the estimates for the model coefficients. Interpret unstandardized coefficients, standardized coefficients, and t-test. 
+
+
+```{r, eval = FALSE}
+res <- summary(lm(Sales ~ Income + Price, dat))
+res
+```
+
+* Noticed that we uses `dat` here. We can use either `dat` or `sub` to fit regression model because the variables included in the model are the same.
+
+
+The output tells us that: 
+$$\widehat{Sales} = 155.338 + .022*Income - 3.018*Price$$
+
+## Standardized Regression Coefficients
+
+* We can find standardized regression coefficients by using `scale()` to standardize each of the variables we input into `lm()`. 
+
+```{r, echo = TRUE, eval=FALSE}
+summary(lm(scale(Sales) ~ scale(Income) + scale(Price), dat))
+```
+
+In standarized regression coefficients: 
+$$Z(\widehat{Sales}) = .409*Income - .388*Price$$
+
+
+Output in next page
+
+
+## Cont.
+
+\footnotesize
+
+```{r, echo = TRUE, eval=TRUE}
+summary(lm(scale(Sales) ~ scale(Income) + scale(Price), dat))
+```
+
+
+## Evaluate the model
+
+* Then we evaluate the model fit based on $R^2$, $adjusted\ R^2$, F-test.
+
+The regression model indicated that the proportion of the variability in cigarettes sales accounted for by income and price is 22% ($R^2= .25, adjusted\ R^2 = 0.22,F (2,48)=8.01,p<.001$) 

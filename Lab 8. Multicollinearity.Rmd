@@ -1,0 +1,267 @@
+---
+title: "Lab 8. Multicollinearity"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+opts_chunk$set(class.output='sh', comment = "",message = FALSE,warning = FALSE)
+```
+
+## Collinearity 
+
+\begin{itemize}
+  \item  Multiple Regression Coefficients, what are they?
+  \begin{itemize}
+    \item Effect of X1 after controlling for all other Xs.
+    \item What if X1 only has random effect after controlling all Xs?
+    \item What if X1 has no effect after controlling all Xs? 
+  \end{itemize}
+  \item Issue of Collinearity
+    \begin{itemize}
+    \item Conceptual Issue
+      \begin{itemize}
+        \item Redundant Variables, redundant information
+      \end{itemize}
+    \item Estimation Issue
+    \begin{itemize}
+      \item “Behind the scenes” the computer needs to take the inverse of a matrix to compute the B estimates. Collinearity is a particular reason that such an inverse might be undefined. 
+      \item Think of it as telling the computer to divide by 0. 
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
+
+## Suspect Multicollinearity When…
+
+\begin{itemize}
+  \item Coefficients are not significant
+  \item The direction (- or +) of the coefficient doesn’t make sense
+  \item The s.e. of the coefficients are very high
+  \item When adding or dropping a predictor, the whole model changes
+  \item When a few more data points are added, the whole model changes
+\end{itemize}
+
+## Detecting Multicollinearity
+
+\begin{itemize}
+  \item Matrix Scatter Plot—look for linear relationships among the predictors
+  \item Correlations (among the predictors)—above .8 are especially indicative; \textbf{however, it may be combinations of predictors causing the collinearity}
+  \item Coefficients—high s.e.; may not be significant (but $R^2$ may still be high and the model may be significant) 
+  \item Variance Inflation Factor (VIF) — look for values over 10
+  \item Condition number ($\kappa$) — look for a value over 15
+  \item Sum of the reciprocal eigenvalues—look for a value over ($5\times p$)
+\end{itemize}
+
+## Example: Advertising
+
+\footnotesize
+This example uses the dataset “Advertising Data” 
+
+```{r}
+library(haven)
+dat <- read_sav("dat_advertising.sav")
+head(dat)
+```
+
+* `S_t`: Aggregate sales of a firm in period t (dependent variable)
+
+* `A_t`: Advertising expenditures (A_t)
+
+* `E_t`: Sales expense (E_t)
+
+* `P_t`: Promotion expenditures (P_t)
+
+* `A_t1` and `P_t1` are the lagged one-year variables
+
+## Pairwise Scatterplot
+
+\footnotesize
+```{r,fig.height=6}
+plot(dat)
+```
+
+## Correlations
+
+\footnotesize
+```{r}
+round(cor(dat),2)
+```
+
+## Regression Results
+\scriptsize
+```{r}
+mod <- lm(S_t ~ P_t1 + E_t + P_t + A_t1 + A_t, data = dat)
+summary(mod)
+```
+
+## Collinearity Detection
+
+* According to $R^2$, and $F$, this model has an adequate fit, however…
+
+* Only two of the coefficients are significant.
+
+* This suggests multicollinearity exist in the set of predictors
+
+## Variance Inflation Factor
+\begin{itemize}
+  \item Only considers the relationships between the predictors (the outcome variable is ignored)
+  \item Measures the amount by which the variance of the jth regression coefficient is increased due to the linear association of $X_j$ with other predictor variables, relative to the variance that would result if $X_j$ were not related to them linearly
+  \item VIFs start at 1 and have no upper limit. A value of 1 indicates that there is no correlation between this independent variable and any others.
+  \item Regress the jth predictor variable against all other predictors:
+  \[
+  VIF_j = \frac{1}{1-R^2_j}
+  \]
+\end{itemize}
+
+## VIF
+
+We use `car::vif(lm_output)` to calculate the variance inflation factor
+```{r}
+library(car)
+vif(mod)
+```
+
+* If $VIF_j= 1$, variable $j$ is not correlated with any other independent variable. 
+
+* As a rule of thumb, multicollinearity is a potential problem when $VIF_j$ is greater than 4
+
+* and it is a serious problem when it is greater than 10.
+
+* Only $E_t$ has a VIF under 10; therefore, there is likely a collinear relationship between the remaining variables.
+
+## Principal Components Analysis (PCA)
+\begin{itemize}
+  \item Conceptually related to Factor Analysis
+  \item Creates Principal Components
+  \item Rules for PCs
+  \begin{itemize}
+    \item PCs are linear sums of the original X variables (not Y)
+    \item PCs are ranked by the order in which they explain variance
+    \begin{itemize}
+    \item Eigen-values and eigen-vectors are related to variance
+    \end{itemize}
+    \item PCs are orthogonal
+    \item PCs are NOT latent factors themselves, but do represent combinations or clusterings of variables. 
+  \end{itemize}
+\end{itemize}    
+
+## More about PCA
+\begin{itemize}
+  \item If all X variables are completely uncorrelated, each PC has an eigen-value of 1. 
+  \item In real data, X variables are correlated, leading some PCs to have eigen-values >1 and some PCs with eigen-values <1. 
+  \item PCs with eigen-values >1 have explanatory power greater than a randomly selected initial variable. 
+  \item PCs with eigen-values < 1 represent collinearity in the data. 
+  \item Scree plot shows the PCs in order, to visualize PCs
+  \begin{itemize}
+    \item Kaiser Rule: eigenvalue > 1
+    \item Elbow Rule
+    \item Explained Variance Rule
+  \end{itemize}
+\end{itemize}
+
+## Screet Plot
+\small
+We use `psych::scree(data)` to get scree plot
+
+* `factor = FALSE` specify only conduct principle component analysis (not factor analysis)
+```{r,fig.height=5}
+library(psych)
+scree(dat[,-1],factor = FALSE) # remove the first column: outcome(Y_t)
+```
+
+## PCA - Condition Number
+\footnotesize
+We use `psych::principal(data)` to get eigenvalues
+```{r}
+pca <- principal(dat[,2:6], nfactors=5, rotate = "none")
+# check the "SS loadings" for the eigenvalues
+loadings(pca)
+```
+
+## Calculate – Condition Number
+\scriptsize
+```{r}
+loadings(pca)
+```
+
+\[
+\kappa = \sqrt{\frac{max\ eigenvalue}{min\ eigenvalue}} = \sqrt{\frac{\lambda_{max}}{\lambda_{min}}} = \sqrt{\frac{1.701}{0.007}} = 15.588
+\]
+
+* $15 \leq \kappa < 30$ - weak collinearity
+
+* $30 \leq \kappa < 100$ - strong
+
+* $100 < \kappa$ extreme
+
+## PCA Results: Sum of the Reciprocals of the Eigenvalues
+
+\[
+\sum^p_{j = 1} \frac{1}{\lambda_j} > 5\times p
+\]
+
+* p is number of predictors
+
+The sum of the reciprocals does exceed the cut-off for determining multicollinearity:
+\[
+\frac{1}{1.701} + \frac{1}{1.288} + \frac{1}{1.145} + \frac{1}{0.859} + \frac{1}{0.007} = 145.26 > 25 
+\]
+
+## PCA Results
+\small
+* We can use a component (a.k.a the last one in this case) with the eigen value almost equals to 0 to find out an equation describing the relationship between variables.  
+
+* Look for eigenvalues which are essentially zero (\textbf{PC5}), then refer to its eigenvector (the empty loadings suggest very small contribution of the predictors to the corresponding components)
+```{r}
+#this gives you the corresponding eigenvectors
+(loadings <- unclass(loadings(pca)))
+```
+
+## PCA Results
+\small
+* The values from the eigenvector become the coefficients of the equation (note:$\tilde{X}$ represent the standardized predictors.)
+
+* The eigenvalue of $\lambda_5$ is almost 0: $C_5 = .044\tilde{A_t}+.042\tilde{P_t} -.001\tilde{E_t} +.037\tilde{A_{t-1}}+ .048\tilde{P_{t-1}}$
+
+* Replace values that are essentially 0 by 0: $0 = .044\tilde{A_t}+.042\tilde{P_t} +.037\tilde{A_{t-1}}+ .048\tilde{P_{t-1}}$
+
+* Rearrange the equation to determine the linear relationship: $\tilde{A_t} = -.951\tilde{P_t} -.833\tilde{A_{t-1}}-1.087\tilde{P_{t-1}}$
+
+* This is the equation describing the relationship between predictors: Advertising expenditures is equivalent to a linear relationship between promotion, last year’s advertising, and last year’s promotion expenditures
+
+## Options for Correcting Multicollinearity
+
+* Do nothing, might not be too severe, and there may be theoretical considerations for the selection of variables
+
+* Eliminate the extraneous variable
+
+* Combine variables
+
+* Replace variables
+
+* Increase the sample size
+  + Variables may be artificially correlated due to sampling error
+
+
+## Advanced Options
+
+* Latent Growth Curve Modeling –HLM
+  + Allows for modeling a change in a variable over time, where in regression it would lead to collinearity issues
+
+* Factor Analysis
+  + Allows for modeling latent (not directly measureable) variables
+
+* Interaction Terms (Moderation Effects)
+  + Try centering, moderation terms will always be collinear before centered, might not be afterwards. 
+
+* Mediation Effects (Collinearity is of interest)
+  + SEM
+
+

@@ -1,0 +1,377 @@
+---
+title: "Lab 2. R Markdown"
+author: "PYSC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+opts_chunk$set(class.output='sh', comment = "")
+```
+
+## The Data Lifecycle
+
+1. Data entry, import, cleaning
+
+2. Data analysis 
+
+    * Creating plots 
+  
+    * Running $t$ tests, ANOVAs, etc.
+
+3. Reporting & Documentation
+
+    * Archiving every step you did to manipulate your raw data
+
+    * Communicating your results clearly to (a) your audience, (b) your collaborators, and (c) your future self
+
+    * R Markdown
+
+
+## R Markdown
+
+* R Markdown is a text-processing language that is built into RStudio. R Markdown is used to generate reports (pdf, html, Word) that integrate text, R code, R output, and R-generated plots.
+
+* This presentation is written in R markdown!
+
+* You are expected to complete your homework assignments with R Markdown.
+
+## R Markdown
+
+R Markdown scripts have the extension ".Rmd"
+
+To open an R Markdown document:
+
+* File -> New File -> R Markdown....
+
+* Or from the drop-down menu at the upper-left side of the RStudio window
+
+You have some choices about the output type:
+
+* Choose "Document" (or "Presentation" if you want to make a presentation)
+
+  * Don't worry about "Shiny" or "From Template"
+
+* Choose the output type that you want (pdf or Word for homework, html for websites)
+  
+  * pdf will only work if you have \LaTeX installed
+
+## R Markdown 
+
+* Select a pdf document output, and hit "OK", a new file will open in your script pane. 
+
+* R Markdown gives us an example document that illustrates some of the features of Markdown. 
+
+* To compile the document, hit the "Knit" button above the script, go to File -> Knit Document, or type Cmd/Ctrl + Shift + K
+
+  * You will be asked to save the Rmd document first
+
+* In the same folder in which you saved the Rmd document, a pdf document should be produced (it might even open automatically). Take a minute or two to look at and compare the pdf document and the Rmd script.
+
+## R Markdown
+
+Let's take a closer look at the first few lines of the Rmd document. The first few lines will look something like this: 
+
+```
+---
+title: "Untitled"
+author: "Me"
+date: "Today"
+output: pdf_document
+---
+```
+
+This is called A YAML header. You can edit the title, author, and date as you want (keep quotation marks). The "output" line only understands certain phrases, so it's easiest to specify the type of output when you first create the document.
+
+## R Markdown 
+
+* The basics of R Markdown syntax are given on the cheat sheet:
+
+[https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)
+
+* Let's spend a few minutes looking at the cheat sheet (sections 1-6).
+
+* On your own, you might want to also look through the R Markdown [documentation](https://bookdown.org/yihui/rmarkdown/)
+
+## Including R Code and Output
+
+* To begin an R code "chunk", type 3 back ticks (the button above "Tab" on most keyboards), followed by {r}
+
+* To end an R code "chunk" type 3 back ticks.
+
+* Like the following, but without the added spaces:
+
+```
+` ` `{r}
+` ` `
+```
+
+## Including R Code and Output
+
+* As with ordinary R scripts, you can use Cmd/Ctrl + Enter/Return to run R commands
+
+  * Click within the code chunk first
+
+* One thing you might find annoying about Rmd documents is that output is displayed within the Rmd window
+
+  * To change this, Click on the gear icon (to the right of the Knit button) and check "Chunk Output in Console"
+
+## Including R Code and Output
+
+Within the curly brackets that open an R code chunk, you can specify several options. A full list is on the cheat sheet, but these are the options I use most often.
+
+\footnotesize
+
+{r echo = TRUE, eval = TRUE, include = TRUE, fig.height = 7, out.height = "3in"}
+
+* echo: TRUE or FALSE, whether to include the R code along with the output
+
+* eval: TRUE or FALSE, whether to include the R output along with the code
+
+* include: TRUE or FALSE, if FALSE evaluate but don't include input or output
+
+* fig.height/fig.width: dimension of plot in the graphics engine (in inches)
+
+* out.height/out.width: dimension of plot output in the final document (must specify unit manually)
+
+## Practice
+
+How would you implement the following?
+
+1. A chunk that shows the code for multiplying 2 * 3, but not the output
+
+2. A chunk that shows the output for multiplying 3 * 4, but not the code
+
+3. A chunk that shows both the code and output for multiplying 4 * 5
+
+## Practice Answers
+
+1. 
+
+```{r, echo = TRUE, eval = FALSE}
+2 * 3
+```
+
+2. 
+
+```{r, echo = FALSE, eval = TRUE}
+3 * 4
+```
+
+3.
+
+```{r echo = TRUE, eval = TRUE}
+4 * 5
+```
+
+## Summary Statistics with R
+
+Today, we'll work with the ChickWeight dataset that's found in R's `datasets` package. The `datasets` package should come with your installation of R, so there is no need to install it. To load in the data, we can use the `data` function. Take a minute to look at the help page for this dataset to understand what information is given.
+
+\small
+
+```{r, eval = FALSE}
+library(tidyverse)
+data("ChickWeight", package = "datasets") 
+help("ChickWeight")
+ChickWeight <- as_tibble(ChickWeight) # to keep things "tidy"
+ChickWeight %>% glimpse
+```
+
+Output on the next slide.
+
+## Summary Statistics with R
+
+```{r, echo = FALSE, message=FALSE}
+library(tidyverse)
+data("ChickWeight", package = "datasets") 
+ChickWeight <- as_tibble(ChickWeight)
+ChickWeight %>% glimpse
+```
+
+* weight and Time are both numeric (dbl) type variables
+
+* Chick is an ordered factor (ordered by final weight within diet)
+
+* Diet is a factor
+
+## Summary Statistics with R
+
+The summary() function gives summary statistics based on the object type.
+
+```{r}
+summary(ChickWeight)
+```
+
+* For numeric variables, min, IQ, median, mean, 3Q, and max
+
+* For factors, the number of observations at each factor level
+
+## Summary Statistics with R
+
+```{r}
+table(ChickWeight$Diet) # frequencies
+table(ChickWeight$Diet) / nrow(ChickWeight) # proportions
+table(ChickWeight$Diet) / nrow(ChickWeight) * 100 # %pctages
+```
+
+## Summary Statistics with R
+
+Quantiles: .25 (1Q), .50 (median), and .75 (3Q)
+
+```{r}
+quantile(ChickWeight$weight, probs = c(.25, .5, .75))
+```
+
+## Summary Statistics with R
+
+Measures of central tendency: 
+
+```{r}
+mean(ChickWeight$weight) # mean
+median(ChickWeight$weight) # median
+mean(ChickWeight$weight, trim = .05) # 5% trimmed mean
+```
+
+## Summary Statistics with R
+
+The mode: 
+
+```{r}
+table(ChickWeight$Diet) # frequencies by factor levels
+which.max(table(ChickWeight$Diet)) # the mode
+```
+
+## Summary Statistics with R
+
+Measures of variability:
+
+```{r}
+var(ChickWeight$weight) # variance
+sd(ChickWeight$weight) # standard deviation
+IQR(ChickWeight$weight) # interquartile range
+```
+
+## Plotting with ggplot2
+
+`ggplot2` is part of the tidyverse, and is especially useful for creating pretty plots quickly for datasets
+
+`ggplot2` is loaded in with the tidyverse, or we can load it in separately
+
+```{r}
+library(tidyverse) # load in several tidyverse packages
+library(ggplot2) # load in only the ggplot2 package
+```
+
+Note: "`ggplot2`" is the package name, "`ggplot`" is the plotting command
+
+## Grammar of ggplot
+
+Every ggplot begins with the `ggplot` command.
+
+```{r, fig.height = 3}
+ggplot(ChickWeight)
+```
+
+An empty plotting window shows up, because `ggplot` doesn't know what we want to plot!
+
+## Grammar of ggplot
+
+To tell `ggplot` what goes on the x/y axes, we use the aesthetics argument `aes`. The following code tells ggplot to put `Time` on the x axis and `weight` on the y axis. Note that `Time` and `weight` are both column names in the `ChickWeight` dataset.
+
+```{r, fig.height=3}
+ggplot(ChickWeight, aes(x = Time, y = weight))
+```
+
+Now, we have axis labels, but nothing else. Next, we need to tell `ggplot` what type of plot we want.
+
+## Grammar of ggplot
+
+Additional features (such as the type of plot) are added on with the `+` operator 
+
+`geom_point()` is the command for a scatterplot
+
+```{r, fig.height=4}
+ggplot(ChickWeight, aes(Time, weight)) + geom_point()
+```
+
+## ggplot "geoms"
+
+Different plot types are specified with different "`geom`" functions added on to the `ggplot` command
+
+* `geom_point()`: scatterplots
+
+* `geom_path()`: line graphs
+
+* `geom_histogram()`: histograms
+
+* `geom_boxplot()`: box plots
+
+* `geom_bar()` and `geom_col()`: bar plots 
+
+* `geom_qq()` with `geom_qq_line()`: qq plots 
+
+* and many others! Look at the help page for `ggplot2` for a list.
+
+## Histograms
+
+For histograms, only one variable needs to be specified in aes().
+
+```{r, fig.height=4.5}
+ggplot(ChickWeight, aes(weight)) + geom_histogram()
+```
+
+## Histograms
+
+`ggplot` usually complains about the number of bins. To change, use the `bins` (change # bins) or `binwidth` (change bin width) arguments.
+
+\small
+
+```{r, fig.height=4.5}
+ggplot(ChickWeight, aes(weight)) + geom_histogram(bins = 15)
+```
+
+
+## Bar Plots
+
+Use geom_bar() to let R compute frequencies for you (`aes` takes 1 variable)
+
+```{r, fig.height=5}
+ggplot(ChickWeight, aes(Diet)) + geom_bar()
+```
+
+## Box Plots
+
+Box plot of one variable:
+
+```{r, fig.height=4.5}
+ggplot(ChickWeight, aes(y = weight)) + geom_boxplot()
+```
+
+## Box Plots
+
+Box plots of one variable conditional on another variable:
+
+```{r, fig.height = 4.5}
+ggplot(ChickWeight, aes(Diet,  weight)) + geom_boxplot()
+```
+
+
+## Some More Resources
+
+Run the following commands in the console: 
+
+```{r, eval = FALSE}
+colors() ## see all the named colors available in R
+
+vignette("ggplot2-specs") # more about ggplot customizations
+```
+
+Or, just Google what you want to do - seriously!
+

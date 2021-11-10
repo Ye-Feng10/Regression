@@ -1,0 +1,212 @@
+---
+title: "Lab 4: Multiple Regression 2"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+opts_chunk$set(class.output='sh', comment = "")
+```
+
+## Packges for Today (Install if Needed)
+
+```{r, message = FALSE}
+library(knitr)
+library(tidyverse)
+library(ppcor)
+library(readr)
+```
+
+## Before Running the Analysis
+
+\small
+1. Clear the R environment using the following code. (It is a good idea to begin all R scripts this way.)
+
+```{r, echo = TRUE}
+rm(list = ls())
+```
+
+2. Download the data set from Blackboard. Set your working directory to the folder in which the file is saved. Make sure your Rmd file is also saved in this same folder.
+
+```{r, echo = TRUE}
+setwd("/Volumes/GoogleDrive/My Drive/Regression/Lab 4. Multiple Regression 2")
+```
+
+## Overview
+
+Functions: 
+
+* `ppcor::pcor(data)`: partial correlation
+* `ppcor::spcor(data)`: semi-partial correlation
+
+## Objectives
+
+* Understand partial correlations and semipartial correlations
+* Know how to compare nested models using regression analysis
+
+## Data
+
+We will use the same cigarette data from previous lab.
+
+```{r, echo=TRUE,message=FALSE}
+dat <- read_csv("cigarettes.csv")
+```
+
+* Cigarette sales example
+  + `Age`: Median age of a person living in a state
+  + `HS`: Percentage of people over 25 years of age in a state who had completed high shcool
+  + `Income`: Per capita personal income for a state (income in dollars)
+  + `Black`: Percentage of blacks living in a state
+  + `Female`: Percentage of females living in a state
+  + `Price`: Weighted average price (in cents) of a pack of cigarettes in a state
+  + `Sales`: Number of packs of cigarettes sold in a state on a per capita basis
+
+
+## Correlations in Regression Analysis
+
+\begin{center}
+\includegraphics[width = 9cm]{venn.jpg}
+\end{center}
+
+## The Regression Equation
+
+* Summary of the Venn diagram:
+  + Each predictor may add some unique ability to predict the outcome
+  + Predictors often share some ability to predict the outcome
+  
+* Implications
+  + $R$-square ($R^2$) is the proportion of variance of the outcome accounted for by the predictors
+  + In the Venn diagram, $R^2$ is the proportion of the y circle that overlaps
+with any other circle
+
+\begin{center}
+\includegraphics[width = 2cm]{venn1.jpg}
+\end{center}
+
+## Bivariate Pearson Correlation
+
+* The ordinary bivariate Pearson correlation between $y$ and $x_1$, (referred to as $r_{y,x_1}$), ignores the existence of $x_2$
+
+
+* Correlations in Regression Analysis
+
+  + Extent to which $x_1$ predicts the proportion of variance in $y$, ignoring $x_2$.
+  
+\begin{center}  
+\includegraphics[width = .6\linewidth]{venn2.jpg}
+\end{center}
+
+* $r_{y,x_1} = \frac{s_{y,x_1}}{\sqrt{s^2_y}\sqrt{s^2_{x_1}}}$
+  + $s_{y,x_1}$: sample covariance of $y$ and $x_1$
+  + $s^2_y$: sample variance of $y$
+  + $s^2_{x_1}$: sample variance of $x_1$
+
+## Bivariate Pearson Correlations in R
+
+```{r}
+pears_cor <- cor(dat[, c("Sales", 
+                         "Income", 
+                         "Price")])
+pears_cor
+```
+
+## Partial Correlation
+* The **partial correlation** gives the extent to which the part of $x_1$ that is
+independent of $x_2$ correlates with the part of $y$ that is independent of $x_2$:
+
+* Squared partial correlation:
+  + extent to which $x_1$ predicts the proportion of variance in $y$ that is not
+predicted by $x_2$
+
+\begin{center}  
+\includegraphics[width = .8\linewidth]{venn3.png}
+\end{center}
+
+## Partial Correlations in R
+
+Partial and semi-partial correlations can be computed in R using the `ppcor` package. The function `pcor()` function calculates partial correlations, and the function `spcor()` function calculates semi-partial correlations. 
+
+```{r}
+partial_cor <- pcor(dat[, c("Sales", 
+                         "Income", 
+                         "Price")])
+partial_cor$estimate
+```
+
+## Semi-Partial Correlation
+
+The **semi-partial** correlation gives the extent to which the part of $x_1$ that is independent of $x_2$ correlates with $y$:
+
+\begin{center}  
+\includegraphics[width = .8\linewidth]{venn4.png}
+\end{center}
+
+* Squared semi-partial correlation:
+  + proportion of variance in $y$ that is uniquely predicted by $x_1$, beyond $x_2$
+  
+## Semi-Partial Correlations in R
+
+```{r}
+semipartial_cor <- spcor(dat[, c("Sales", 
+                         "Income", 
+                         "Price")])
+semipartial_cor$estimate
+```
+
+Semi-partial correlations are not symmetric. Look for the DV in the rows, and the IV of interest in the columns. For example, 0.40 is the semi-partial correlation of `Sales` with `Income`, and 0.40 is the proportion of variance in `Sales` that is uniquely predicted by `Income`, above and beyond `Price`.
+
+## Interpretation
+
+* Bivariate Pearson correlation ($r = 0.36$) measures the proportion of total variance in sales that is accounted for by income, ignoring price. 
+
+* Partial correlation ($=0.42$) measures the proportion of residual variance in sales (after accounted for price) that is accounted for by income. 
+
+* Semi-partial correlation ($=0.40$) measures the proportion of total variance in sales that is accounted for by income but not by price. 
+
+
+## Nested Models
+
+* **Full models**, sometimes also referred to as the **unrestricted models**, is the model thought to be most appropriate for the data. 
+
+* **Reduced models**, sometimes also referred to as the **restricted models**, is the model that a set of the beta coefficients are set as 0. 
+
+* Nested models are a series of two or more regression equations where independent variables are successively added to an equation to observe changes in the predictors’ relationship to the dependent variable. In other words, the nested models are composed of **full models** and **reduced models**. 
+
+## Nested Models
+
+* The purpose of the F-test is to determine whether additional variation in the dependent variable is explained by adding the additional variables. 
+
+* For the F test to be significant, the difference in R-square must be large relative to the number of independent variables added to the second equation. 
+
+* The hypothesis tested by the F-test: 
+  + H0:  Two models have the same $R$-square
+  + H1:  Two models have different $R$-square (or that the addition of a set of IVs explained significant variance in DV)
+
+
+## Compare Nested Models in R
+
+Using our cigarettes example:
+
+* Model 1: $Sales = \beta_0 + \beta_1Price$
+* Model 2: $Sales = \beta_0 + \beta_1Price + \beta2Income$
+
+Based on the relationship between the two models, we know that Model 2 is the full model and model 1 is the reduced model. 
+
+\footnotesize
+```{r}
+m1 <- lm(Sales ~ Price, dat)
+summary(m1)
+
+m2 <- lm(Sales ~ Price + Income, dat) 
+summary(m2)
+
+anova(m1,m2)
+```
+

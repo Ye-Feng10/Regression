@@ -1,0 +1,225 @@
+---
+title: "Lab 02: Simple Regression"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+  
+```{r include = FALSE}
+library(knitr)
+opts_chunk$set(class.output='sh', comment = "")
+```
+
+## Packges for Today (Install if Needed)
+
+```{r, message = FALSE}
+library(knitr)
+library(tidyverse)
+library(haven)
+library(ggplot2)
+library(psych)
+```
+
+## Overview
+
+Functions: 
+  
+* `cor()` and `cov()`: compute correlation/correlation with arguments:
+  + `use`: how to treat missing data, specify "everything", "complete.obs", "pairwise.complete.obs"
+  + `method`: which type of correlation, specify "pearson", "kendall", or "spearman"
+
+* `geom_smooth()`: adding best-fit lines to a scatterplot with `ggplot`, with arguments:
+  + `method`: `lm` for a linear model or `loess`
+  + `formula`: specify the form of a linear model (e.g., quadratic, cubic)
+
+* `lm()`: fit a linear regression model
+
+* `cor.test()`: hypothesis test for the correlation coefficient
+
+## Objectives
+
+* Understand simple linear regression
+* Calculate regression parameters
+* Understand how we assess the fit of a regression model
+  + Total Sum of Squares
+  + Model Sum of Squares
+  + Residual Sum of Squares
+  + F test
+  + $R^2$
+* Know how to interpret the outputs
+* Interpret a regression mode
+
+## Linear Regression
+
+* Regression analysis is used to predict the value of one variable (the dependent variable) based on other variables (the independent variables).
+  + Dependent variable: denoted $Y$
+  + Independent variables: denoted $X_1,X_2,\ldots,X_K$
+* It is a hypothetical model of the linear relationship between the DV and a set of IVs.
+* **Simple** linear regression has one IV.
+* **Multiple** linear regression has multiple IVs.
+
+## Sales example
+
+A record company boss was interested in predicting record sales from advertising.
+
+```{r, eval = TRUE}
+dat <- read_sav("dat_sales.sav")
+dat %>% glimpse
+```
+
+* Data: 200 different album releases
+* `sales`: Sales (CDs and Downloads) in the week after release
+* `adverts`: The amount (in £s) spent promoting the record before release.
+
+## gg-Plotting with Best-Fit Lines
+\small
+Today, we'll look at the relationship between `adverts` and `sales`. 
+
+Let's first construct a scatterplot to of `adversts` and `sales`:
+
+```{r, fig.height = 4.5}
+ggplot(dat, aes(adverts, sales)) + geom_point()
+```
+
+## gg-Plotting with Best-Fit Lines
+
+We can add different types of best-fit lines using `geom_smooth()`. 
+
+The `method` option tells `ggplot` which type of best-fit line to draw. The `lm` option indicates a linear model (simple linear regression by default).
+
+* In `geom_smooth`, "formula" is not necessary, but prevents a message
+
+\footnotesize
+```{r, fig.height = 3.5}
+ggplot(dat, aes(adverts, sales)) + geom_point() + 
+  geom_smooth(method = lm, formula = y ~ x) 
+```
+
+## gg-Plotting with Best-Fit Lines
+
+By default, `ggplot` adds an error band around the best-fit line. We can turn this off using the argument `se = FALSE`.
+
+```{r, fig.height = 4.5}
+ggplot(dat, aes(adverts, sales)) + geom_point() + 
+  geom_smooth(method = lm, formula = y ~ x, se = FALSE)
+```
+
+## Correlations
+
+The `cov()` and `cor()` functions are the easiest ways to calculate the covariance and the correlation.
+
+```{r}
+cov(dat$adverts, dat$sales)
+cor(dat$adverts, dat$sales,use = "complete.obs")
+
+```
+
+We don't have any missing data in this example, but it's common to run into missingness when computing correlations. The `use` argument tells `R` how to handle missing data. For example, `use = "complete.obs"` will compute the correlation based only on the complete cases.  
+
+## Correlations: Hypothesis Test
+
+To do a hypothesis test of the Pearson product-moment (PPM) correlation, use the `cor.test()` function:
+  
+```{r}
+cor.test(dat$adverts, dat$sales)
+```
+
+
+## Correlations: Hypothesis Test
+
+Not surprisingly, this correlation is significantly different from 0, $r = .58, t(198) = 9.98, p < .001 (CI = [.48, .66])$. This function also gives us the confidence interval.
+
+## Regression
+
+Finally, let's run a linear regression with `sales` as the DV and `adverts` as the IV. This will give us the equation for the linear best-fit line that we drew on the scatterplot earlier.
+
+Linear regression in `R` is done with the `lm` function. I like to take a `summary()` of this output right away because it gives us the summary coefficient table and information about $R^2$, etc. `lm` takes as input a formula of the form: "DV ~ IV", and you can specify the dataset as the second argument.
+
+```{r, eval = FALSE}
+summary(lm(sales ~ adverts, dat))
+```
+
+Output on next slide.
+
+## Regression
+
+\footnotesize
+```{r, echo = FALSE}
+res <- lm(sales ~ adverts, dat)
+summary(res)
+```
+
+## Regression
+
+$$y = \beta_0 + \beta_1\times x +\epsilon$$
+
+* Variables
+  + X = Independent Variable
+  + Y = Dependent Variable
+
+* Parameters: 
+  + $\beta_0$ = Y-Intercept
+  + $\beta_1$ = Slope
+
+* $\epsilon$ = residual error
+  + Residuals are assumed to be normally distributed
+
+## Understanding Regression Coefficients
+
+The output tells us that $\widehat{sales} = 134.14 + 0.096\times adverts$. 
+
+* For `adverts` = 0, the predicted value of `sales` would be 134.14. 
+
+* For a one-unit increase in `adverts`, `sales` are expected to increase by 0.096 on average.
+
+
+These interpretations assume that a straight line is the best representation of the relationship between `adverts` and `sales`. 
+
+## Test the relationship between IV and DV
+
+* The t-test results of $\beta_1$ (slope coefficient) suggested that is significant relationship between these 2 variables, $\beta_1=0.096$, $t(198) = 9.98$, $p<.001$. 
+  + The t-test is conducted to test the hypothesis below:
+  + Null hypothesis: $\beta_1=0$.
+  + Alternative hypothesis: $\beta_1\ne0$
+
+* To find the 95% CI of $\beta_0$ and $\beta_1$, we can use the `confint` function
+
+\small
+```{r}
+res <- lm(sales ~ adverts, dat)
+confint(res,level = 0.95)
+```
+
+## How Good is the Model?
+
+* The regression line is only a model based on the data, that might not reflect reality, we need some way of testing how well the model fits the observed data.
+
+* SST: Total variability (variability between scores and the mean)
+* SSE: Residual/Error variability (variability between the regression model and the actual data)
+* SSR: Model variability (difference in variability between the model and the mean)
+
+**If the model results in better prediction than using the mean, then we expect SSR to be much greater than SSE**
+
+## Testing the Model
+\footnotesize
+1. ANOVA
+
+* $F = \frac{MSR}{MSE}$
+```{r}
+anova(res)
+```
+
+2. $R^2$: The proportion of variance accounted for by the regression model
+
+* $R^2 = \frac{SSR}{SST}$
+
+* Adjusted $R^2$: an adjustment that penalizes the addition of extraneous predictors to the model.
+
+##  Reporting results
+
+Simple regression analysis shows that advertising budget significantly predicted higher record sales ($b = 0.10, p < .001$). The results of the regression indicated the predictor explained 33.5% of the variance ($R^2=.335$,$F(1, 198) = 99.59$, $p<.001$).

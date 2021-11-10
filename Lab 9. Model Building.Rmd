@@ -1,0 +1,308 @@
+---
+title: "Lab 9. Model Building"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+opts_chunk$set(class.output='sh', comment = "",message = FALSE,warning = FALSE)
+```
+
+## Variable Selection Procedure Options
+\small
+* **Forward**: \textit{enters the variables into the model one at a time in an order determined by the strength of their correlation with the criterion variable}. The effect of adding each is assessed as it is entered, and variables that do not significantly add to the success of the model are not allowed to enter the model. 
+
+* **Backward**: \textit{enters all independent variables at one time and then removes variables one at a time based on a preset significance value to remove (t-test value)}.  The remaining equation is fitted and the significance of the coefficients re-examined.  The procedure stops when all coefficients are significant.
+
+* **Stepwise**: \textit{This combines both forward and backward procedures}. Since inter-correlations are complex, the variance due to certain variables will change when new variables are entered into the equation. This is the most frequently used of the regression methods. 
+
+## Variable Selection Procedure Remarks
+
+* All the variable selection procedure does not automatically give you the “best” choices; they are just useful tools for variable selection in noncollinear data.
+
+* Forward, Backward, and Stepwise typically gives similar results.
+
+* Use the appropriate test statistics for model comparisons. 
+  + R-square change & and its significant test result
+  + Significance of regression coefficients
+  + Underlying assumptions (Linearity between X and Y; Independency of predictors; Normality and homoscedasticity of residuals) 
+
+## Data for Today
+\small
+* This example uses the dataset “Building Prices” 
+
+* Research scenario: selling price of a home is determined by taxes and physical characteristic of the building. 
+
+```{r}
+library(haven)
+dat <- read_sav("dat_building.sav")
+```
+
+\footnotesize
+```{r,echo=FALSE,message=FALSE}
+library(tidyverse)
+info <- tibble(variable = c("Sales", "Taxes", "NBath", "NGar", "NBedrms", "NFire"),
+               description = c("Sale price of the house in thousands of dollars",
+                               "Taxes (local, county, school) in thousands of dollars",
+                               "Number of bathrooms",
+                               "Number of garage stalls",
+                               "Number of bedrooms",
+                               "Number of fireplaces"))
+knitr::kable(info)
+```
+
+## Building Prices: Matrix Scatter
+\footnotesize
+```{r,fig.height=4.5}
+pairs(dat)
+```
+
+* There doesn’t appear to be any multicollinearity (but we’ll confirm later).  
+
+* Unfortunately, there also doesn’t seem to be a strong linear relationship between Sales Price and the predictors other than Taxes.
+
+## Building Prices: Correlations
+
+```{r}
+round(cor(dat),2)
+```
+
+## Model Evaluation
+\small
+1. Fit the model with all predictors
+```{r}
+mod1 <- lm(Sales ~ Taxes + NBath + NGar 
+           + NBedrms + NFire,data = dat)
+```
+
+2. Good $R^2$ and a significant model
+
+3. Only `Taxes` and `Nbath` are significant
+
+* Model results shown in next slides
+
+## Model Results
+\scriptsize
+```{r}
+summary(mod1)
+```
+
+## Evaluate Normality of error
+```{r,eval=TRUE,echo=FALSE,fig.height=5}
+library(ggplot2)
+library(tidyverse)
+dat1 <- dat %>% 
+    mutate(residuals = residuals(mod1),predicted = predict(mod1))
+ggplot(dat1, aes(sample = residuals)) + 
+  stat_qq() + stat_qq_line()
+```
+
+* The QQ plot confirms normality of error.
+
+## Evaluate Homoscedasticity of the Errors
+
+```{r,echo=FALSE,eval=TRUE,fig.height=5}
+ggplot(dat1, aes(predicted, residuals)) + 
+  geom_point() + 
+  geom_smooth(method = loess, formula = y ~ x)
+```
+
+* The residual plot suggests no violation of homoscedasticity assumption
+
+## Evaluate Multicollinearity
+
+```{r}
+library(car)
+vif(mod1)
+```
+
+* No signs of multicollinearity from the VIF (all smaller than 4)
+
+## Check for Outliers
+
+* We use cook's distance to detect for multivariate outliers
+  + Use threshold of 1
+```{r}
+cook <- cooks.distance(mod1)
+```
+
+```{r}
+cook[cook > 1]
+```
+
+* No multivariates outliers detected based on cook's distance measure.
+
+## Variable Selection Use R Package "olsrr"
+
+* Load the `olsrr` package first
+```{R}
+#install.packages("olsrr")
+library(olsrr)
+```
+
+* `olsrr` is a very powerful tool designed to make it easier for users, particularly beginner/intermediate R users to build ordinary least squares regression models.
+
+* We will use `olsrr` demonstrate forward, backward, and stepwise variable selection. The package also includes comprehensive regression output, model assumption check and other useful functions.
+
+* `olsrr::ols_regress` provide the similar function as `lm` to fit the model with full model output
+```{r}
+mod2 <- ols_regress(Sales ~ Taxes + NBath + NGar 
+           + NBedrms + NFire,data = dat)
+```
+
+## Model Results
+\tiny
+```{r}
+mod2
+```
+
+## "Forward" Selection
+\small
+* `ols_step_forward_p`: Forward Selection build regression model from a set of candidate predictor variables by entering predictors based on p values (default is .3), in a stepwise manner until there is no variable left to enter any more. 
+
+* The effect of adding each is assessed as it is entered. 
+
+* p value can be changed in argument `penter`
+
+* If details is set to TRUE, each step is displayed.
+
+```{r}
+mod.selection <- lm(Sales ~ ., data = dat)
+fit.forward.p05 <- ols_step_forward_p(mod.selection, penter = .05)
+fit.forward.pdefault <- ols_step_forward_p(mod.selection)
+```
+
+* Results shown in following slides
+
+## Output - p is 0.05
+\footnotesize
+```{r,echo=FALSE}
+fit.forward.p05
+```
+
+* Using 0.05 p value, only Taxes add to the model, while all other predictors did not add to the model.  
+
+## Output - p is 0.3
+\footnotesize
+```{r,echo=FALSE}
+fit.forward.pdefault
+```
+
+* Using 0.3 p value, Taxes, NBath and NFire are added to the model
+
+## Output - details
+\small
+* Set `details = TRUE` to get detailed output
+```{r,echo=TRUE,eval=FALSE}
+ols_step_forward_p(mod.selection, details = TRUE)# p =0.3
+```
+
+* The output is too long to include in the slides, please run the above code to check for the detailed output
+
+## "Backward" Selection
+\small
+* `ols_step_backward_p`: Build regression model from a set of candidate predictor variables by removing predictors based on p values (default is .3), in a stepwise manner until there is no variable left to remove any more. 
+
+* p value can be changed in argument `prem`
+
+```{r}
+fit.Backward.p05 <- ols_step_backward_p(mod.selection, prem = .05)
+fit.Backward.pdefault <- ols_step_backward_p(mod.selection)
+```
+
+## Output - p is 0.05
+\footnotesize
+```{r,echo=FALSE}
+fit.Backward.p05
+```
+
+* Using 0.05 p value, only Taxes retained to the model, while all other predictors did not retain to the model.  
+
+## Output - p is 0.3
+\footnotesize
+```{r,echo=FALSE}
+fit.Backward.pdefault
+```
+
+* Using 0.3 p value, only NFire is removed from the model
+
+## Output - details
+\small
+* Set `details = TRUE` to get detailed output
+```{r,echo=TRUE,eval=FALSE}
+ols_step_backward_p(mod.selection, details = TRUE)#p = 0.3
+```
+
+
+## "Stepwise" Method
+\small
+* This combines both forward and backward procedures. 
+
+* The stepwise method chooses the same one-predictor model as the forward selection procedure. 
+
+* `ols_step_both_p`: Build regression model from a set of candidate predictor variables by entering and removing predictors based on p values, in a stepwise manner until there is no variable left to enter or remove any more.
+
+* Default `pent = 0.1, prem = 0.3`. Change the p-value for enter a candidate predictor with `pent` and remove a candicate predictor with `prem`.
+
+```{r}
+fit.step.pdefault <- ols_step_both_p(mod.selection)#default p 
+```
+
+
+## Output
+\scriptsize
+```{r,echo=FALSE}
+fit.step.pdefault
+```
+
+* The stepwise selection method add Taxes and NBath in the final model
+
+## Output - details
+\small
+* Set `details = TRUE` to get detailed output
+```{r,echo=TRUE,eval=FALSE}
+ols_step_both_p(mod.selection, details = TRUE)#default p 
+```
+
+## Other useful functions
+
+* `ols_plot_resid_fit`: Residual Vs Fitted Values Plot
+
+```{r, fig.height=5}
+ols_plot_resid_fit(mod1)
+```
+
+## Other useful functions
+\small
+
+* `ols_coll_diag`: evaluate the multicollinearity
+
+\tiny
+```{r}
+ols_coll_diag(mod1)
+```
+
+## Other useful functions
+\small
+* `ols_plot_cooksd_bar`: Return chart of cook’s distance to detect observations that strongly influence fitted values of the model. 
+  + The threshold use a criteria $\frac{4}{N}$
+  
+```{r, fig.height=5}
+ols_plot_cooksd_bar(mod1) 
+```
+
+## Other useful functions
+\small
+* `ols_plot_resid_qq`: Return QQ-plot for detecting violation of normality assumption.
+```{r, fig.height=5}
+ols_plot_resid_qq(mod1)
+```
+
+

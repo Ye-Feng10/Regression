@@ -1,0 +1,290 @@
+---
+title: "Lab 6. Categorical Predictors"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+opts_chunk$set(class.output='sh', comment = "")
+```
+
+## Outline
+
+* Regression with a two-level categorical variable
+* Regression with a categorical variable with 2+ levels
+* Interaction between a categorical and a continuous predictor
+
+## Read in Data and Load Packages for Today
+
+```{r,message=FALSE}
+library(readr)
+library(ggplot2)
+dat <- read_csv("dat_ski.csv")
+```
+
+
+## Regression with a two-level categorical variable 
+\small
+* So far we have learned regression with continuous predictors.
+
+* It is also possible to use categorical predictors in regression models, or both categorical and continuous predictors 
+
+* Example: the sales for a ski manufacturing firm over years 1964 to 1973 (in millions) are predicted by personal disposable income (PDI) and the quarter of the year. 
+  + outcome: sales - continuous
+  + predictor 1: PDI - continuous
+  + predictor 2: quarter (1, 2, 3, 4) - categorical 
+
+* We hypothesized that higher sales were associated with higher PDI (buying power) and skiing season (Q1 ad Q4). 
+
+* How do we analyze this?
+
+## Regression Model 
+
+\[
+Sales = b_0 + b_1PDI + b_2Q1Q4
+\]
+
+* Interpretation:
+  + $b_0$: predicted sales for the control group (i.e., Q1Q4 = 0) with PDI = 0
+  + $b_1$: predicted increase in sales for a one-point increase in PDI, holding quarter constant. 
+  + $b_2$: predicted increase in sales for skiing season (i.e., Q1Q4 = 1 vs Q1Q4 = 0), holding PDI constant. 
+
+
+## Creative Dummy Code Variables
+
+First, create a dummy code for the categorical variable
+
+* Code 1Q/4Q as ‘1’, 2Q/3Q as ‘0’ (could also be the other way around) 
+
+```{r}
+# Way 1
+dat$Q1Q4 <- ifelse(dat$quarter == 1 | dat$quarter == 4,1,0)
+```
+
+
+```{r,echo=TRUE,eval=FALSE}
+# Way 2
+dat$q1q4 <- 0
+dat[dat$quarter == 1,]$q1q4 <- 1
+dat[dat$quarter == 4,]$q1q4 <- 1
+
+# or in one line
+# dat[dat$quarter == 1 | dat$quarter == 4,]$q1q4 <- 1
+```
+
+## Regression Model
+
+Next, enter both PDI and the dummy variable into a multiple linear regression to predict sales. 
+
+\footnotesize
+```{r}
+res <- lm(Sales ~ PDI + Q1Q4,dat)
+summary(res)
+```
+
+
+## Regression Output 
+
+\[
+Sales = 9.54 + 0.20*PDI + 5.46*Q1Q4
+\]
+
+* Predicted sales for the control group (i.e., Q1Q4 = 0) with PDI = 0 is 9.54 million
+
+* A one-point increase in PDI is associated with 0.20 million increase in sales, holding quarter constant. 
+
+* The Q1/Q4 quarters had a higher sales by 5.46 million than the Q2/Q3 quarters, holding PDI constant. 
+
+
+## Regression Output
+
+\[
+Sales = 9.54 + 0.20*DI + 5.46*Q1Q4
+\]
+
+* Regression model for the two groups:
+  + $\widehat{Sales}_{Q1Q4} = 9.54 + 0.20*PDI + 5.46*1$
+  + $\widehat{Sales}_{Q2Q3} = 9.54 + 0.20*PDI + 5.46*0$
+
+
+* For average PDI ($M_{PDI} = 155.65$), the pedicted sales are:
+  + $\widehat{Sales}_{Q1Q4} = 9.54 + 0.20*155.65 + 5.46*1$
+  + $\widehat{Sales}_{Q2Q3} = 9.54 + 0.20*155.65 + 5.46*0$
+
+## Regression with a categorical variable with 2+ levels
+\small
+* In general, for k groups, we can represent group membership with (k - 1) dichotomous dummy variables 
+
+* For each dummy variance, assign ‘1’ to members of one group and ‘0’ to all others 
+
+* One group (called the **reference/control** group) is coded ‘0’ on all dummy variables 
+
+\begin{table}
+\centering
+\begin{tabular}{l|lll}
+            & D1 & D2 & D3  \\ 
+\hline
+Q1          & 1  & 0  & 0   \\
+Q2          & 0  & 1  & 0   \\
+Q3          & 0  & 0  & 1   \\
+Q4(Control) & 0  & 0  & 0  
+\end{tabular}
+\end{table}
+
+## Regression Model
+
+\[
+Sales = b_0 + b_1D_1 + b_2D_2 + b_3D_3 + b_4PDI
+\]
+
+Interpretation:
+
+* $b_0$: predicted y for control group (d1=0, d2=0, d3=0) with PDI = 0
+* $b_1$: difference in y between (Q1) and (control)
+* $b_2$: difference in y between (Q2) and (control)
+* $b_3$: difference in y between (Q3) and (control)
+
+## Create Dummy Code Variables
+
+First, create a 3 dummy variables to represent 4 groups (Q4 was the control group)
+
+```{r}
+dat$D1 <- ifelse(dat$quarter == 1,1,0)
+dat$D2 <- ifelse(dat$quarter == 2,1,0)
+dat$D3 <- ifelse(dat$quarter == 3,1,0)
+```
+
+Then fit the regression model with both the `PDI` and the 3 dummy variables
+
+```{r}
+res2 <- lm(Sales ~ D1 + D2 + D3 + PDI, dat)
+```
+
+## Another Way
+
+In R, `lm` will automatically dummy code `factor` variable. The default reference level is level 1.
+
+\footnotesize
+```{r}
+summary(res2)
+summary(lm(Sales ~ factor(quarter) + PDI,dat))
+```
+
+
+## Test of Individual Group Predictors
+
+* (# groups - 1) contrasts were conducted to test the hypothesis that each group is not different from the reference group in Y
+
+* If $b_1$ is significant, then the $Q1$ group differs significantly from the control group. 
+
+\footnotesize
+```{r}
+summary(res2)$coefficients
+```
+
+
+## Test of the Categorical Variables Together
+
+Test of the categorical variable (k-1 dummy variables) using $R^2$ change.
+
+* Test the hypothesis that all categorical variable coefficients are simultaneously zero 
+
+* Need to examine two nested models
+  + Model 1: $Sales = b_0 + b_4PDI$
+  + Model 2: $Sales = b_0 + b_1D_1 + b_2D_2 + b_3D_3 + b_4PDI$
+  
+* F-test tests whether the increase in $R^2$ (due to D1, D2, D3) is significant
+
+## F-test of R-square Change
+\small
+\[
+F(p-q,n-p-1) = \frac{\frac{R^2_{Model2}-R^2_{Model1}}{p-q}}{\frac{1-R^2_{Model2}}{n-p-1}}
+\]
+
+* $p$ = the number of predictors in Model 2
+* $q$ = the number of predictors in Model 1
+* $n$ = the number of observations
+
+```{r}
+res1 <- lm(Sales ~ PDI,dat)
+anova(res1,res2)
+```
+
+## Interaction between a categorical and a continuous predictor
+
+* Interaction effect is also called a moderation effect. 
+
+* Definition: the regression of y on one predictor is conditional on (varies depending on) the value of another predictor
+
+* For example: we hypothesized that the the effect of personal income (buying power) on sales depends on the season, for example:
+  + Personal income leads to more sales in skiing season
+  + Personal income does not lead to more sales in non-skiing season
+
+* We can examine the interaction effect of PDI and quarter to test this hypothesis 
+
+## Regression Model 
+\[
+Sales = b_0 + b_1PDI_c + b_2Q1Q4 + b_3PDI_c*Q1Q4
+\]
+
+* Centering the continuous variable (PDI) yield meaningful interpretations for $b_0$, $b_1$, $b_2$ $\rightarrow$ 0 represent the mean of PDI
+
+* Interpretations:
+  + $b_0$: predicted y for when Q1Q4 = 0 and $PDI_c$ = 0
+  + $b_1$: increase in y when PDI increases by 1 point at Q1Q4 = 0
+  + $b_2$: difference in y between Q1Q4 and Q2Q3 at $PDI_c$ = 0
+  + $b_3$: Change of linear regression of y on PDI, when Q1Q4 increase 1 unit (e.g. Difference in the effect of PDI on y between Q1Q4 and Q2Q3 (control))
+  
+## Steps
+
+* First, mean-center PDI (subtract the mean from the variable)
+```{r}
+dat$c_pdi <- dat$PDI - mean(dat$PDI)
+```
+  
+* Second, enter $PDI_c$, Q1Q4 and the interaction term into a multiple linear regression model
+  + In `lm`, interaction effect can be specified as multiplication between two predictors `x1*x2`
+  
+```{r}
+res3 <- lm(Sales ~ c_pdi + Q1Q4 + c_pdi*Q1Q4,dat)
+```
+
+## Regression Output
+\footnotesize
+```{r}
+summary(res3)
+```
+
+## Regression Output Interpretations
+
+\[
+Sales = 40.47 + 0.20PDI_c + 5.46*Q1Q4 + 0.00PDI_C*Q1Q4
+\]
+
+* The predicted sales is 40.47 millions for the control (Q1Q4 = 0) with average PDI
+* Sales increase by 0.2 millions when PDI increase by 1 point for the control group
+* Q1Q4 had higher sales by 5.46 millions than Q2Q3 at average PDI
+* The interaction effect is not significant
+
+## Report in APA format
+
+A multiple linear regression was conducted to examine the effects of person disposable income, quarter of the year, and their interaction on sales in a ski manufacturing firm between 1964 to 1973. Results showed that personal disposable income was associated with an increase in sales by 0.20 millions ($p < .001$). The first and fourth quarters had higher sales by 5.46 millions than the second and third quarters ($p < .001$). There was no significant interaction between personal disposable income and the quarter of the year. The model explained 97.2% of the variance in sales, $R^2 = 0.972$, $F(3, 36) = 423.53$, $p < .001$. 
+
+
+## Scatterplot by Groups
+\footnotesize
+Lastly, let create a scatterplot to examine the association between PDI and Sales, separately for the two groups (Q1Q4 and Q2Q3)
+
+```{r,fig.height=5}
+dat$Q1Q4 <- as.factor(dat$Q1Q4)
+
+
+ggplot(dat,aes(PDI,Sales,colour=Q1Q4))+geom_point()
+```

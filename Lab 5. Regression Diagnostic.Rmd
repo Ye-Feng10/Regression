@@ -1,0 +1,449 @@
+---
+title: "Lab 5. Regression Diagnostic"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+opts_chunk$set(class.output='sh', comment = "")
+```
+
+## "Hand Calculate" Semi-partial and partial correlations
+
+Example Data from textbook P67.
+
+\begin{center}
+\includegraphics[width = 9cm]{example}
+\end{center}
+
+## "Hand Calculate" The Correlations
+\small
+Manually "read in" the data:
+```{r}
+X1 <- c(3,6,3,8,9,6,16,10,2,5,5,6,7,11,18)
+X2 <- c(18,3,2,17,11,6,38,48,9,22,30,21,10,27,37)
+Salary <- c(51876,54511,53425,61863,52926,47034,66432,61100,41934,47454,49832,47047,39115,59677,61458)
+exp <- as.data.frame(cbind(X1,X2,Salary))
+```
+
+Calculate the results for further calculation:
+
+* Bivariate correlations between X1, X2, and Y 
+```{r}
+ry1 <- cor(exp$X1,exp$Salary)
+ry2 <- cor(exp$X2,exp$Salary)
+r12 <- cor(exp$X1,exp$X2)
+```
+
+* Multiple R-square 
+```{r}
+res <- summary(lm(Salary ~ X1 + X2,exp))
+Ry12_sq <- res$r.squared
+```
+
+## Partial Correlation
+\small
+The $pr$ can be found as a function of correlations by:
+\[
+pr_1 = \frac{r_{Y1}-r_{Y2}r_{12}}{\sqrt{1-r^2_{Y2}}\sqrt{1-r^2_{12}}}
+and
+\]
+\[
+pr_2 = \frac{r_{Y2}-r_{Y1}r_{12}}{\sqrt{1-r^2_{Y1}}\sqrt{1-r^2_{12}}}
+\]
+
+```{r}
+pr1 <- (ry1 -ry2*r12)/(sqrt(1-ry2^2)*sqrt(1-r12^2))
+pr2 <- (ry2 -ry1*r12)/(sqrt(1-ry1^2)*sqrt(1-r12^2))
+pr1;pr2
+```
+
+## Squared Partial Correlation
+\footnotesize
+The squared partial correlation can be calculated as $pr_1^2$ and $pr_2^2$ 
+
+```{r}
+pr1^2;pr2^2
+```
+
+or by Eq. (3.3.10) on the textbook:
+\[
+pr^2_1 = \frac{R^2_{Y.12} - r^2_{Y2}}{1-r^2_{Y2}}
+\]
+and
+\[
+pr^2_2 = \frac{R^2_{Y.12} - r^2_{Y1}}{1-r^2_{Y1}}
+\]
+
+```{r}
+pr1_sq <- (Ry12_sq - ry2^2)/(1-ry2^2)
+pr2_sq <- (Ry12_sq - ry1^2)/(1-ry1^2)
+pr1_sq;pr2_sq
+```
+
+
+## Semi-partial Correlation
+\small
+A formula for $sr$ for the two IV case may be given as a function of $rs$ as:
+\[
+sr_1 = \frac{r_{y1}-r_{y2}r_{12}}{\sqrt{1-r^2_{12}}}
+\]
+
+and 
+\[
+sr_2 = \frac{r_{y2}-r_{y1}r_{12}}{\sqrt{1-r^2_{12}}}
+\]
+
+
+```{r}
+sr1 <- (ry1-ry2*r12)/sqrt(1-r12^2)
+sr2 <- (ry2-ry1*r12)/sqrt(1-r12^2)
+sr1;sr2
+```
+
+## Squared Semi-partial Correlation
+\footnotesize
+The squared semi partial correlation can be calculated as $sr1^2$ and $sr2^2$ 
+```{r}
+sr1^2; sr2^2 
+```
+
+or by Eq. (3.3.7) on the textbook:
+\[
+sr^2_1 = R^2_{Y.12} - r^2_{Y2}
+\]
+and
+\[
+sr^2_2 = R^2_{Y.12} - r^2_{Y1}
+\]
+
+```{r}
+sr1_sq <- Ry12_sq - ry2^2
+sr2_sq <- Ry12_sq - ry1^2
+sr1_sq; sr2_sq
+```
+
+## Load Packages for Today
+
+```{r,message=FALSE}
+library(haven)
+library(tidyverse)
+library(ggplot2)
+```
+
+
+## Overview
+
+Functions: 
+
+* `ppcor::pcor(data)`: partial correlation
+* `ppcor::spcor(data)`: semi-partial correlation
+* `hatvalues(lm_output)`: leverage
+* `residuals(lm_output)`: model residuals
+* `rstudent(lm_output)`: externally studentized residuals (preferred distance measure)
+* `dffits(lm_output)`: DFFITS influence measure
+* `cooks.distance(lm_output)`: Cook's distance influence measure
+
+## Regression Diagnostics
+
+Regression Diagnostics Steps:
+
+* Missing data (later in the semester)
+
+* Screen outliers (later)
+
+* Check assumptions 
+  + Linearity
+  + Normality of residual
+  + Homoscedasticity of residua
+```{r,echo=FALSE}
+rm(list = ls())
+```
+
+## Check Assumptions
+
+* Regression requires that the data conform to several assumptions.  
+
+* Violations of these assumptions may raise concerns as to whether the estimates of the regression coefficients and their standard errors are correct. 
+
+  + First, and the most severe, the estimates of the regression coefficients may be biased.
+  + Second, only the estimates of the standard errors of the regression coefficients may be biased. 
+
+* Violations of assumptions may be caused by problems in the data set, or the use of an incorrect model
+
+## Assumptions
+
+* Check for **linearity** of the model
+  + Correlations & Scatterplots (Lab 2)
+  + Residual plot (scatter plots of the standardized residual against the predicted values -- no curve-linear shape)
+
+* Residuals
+  + Check for normality of the errors/residuals (resembles a line)
+  + Check for homoscedasticity of the errors/residuals 
+
+## Example
+
+In a regression mode, we predict the `sales` based on `adverts` 
+
+```{r}
+dat1 <- read_sav("dat_sales.sav")
+mod1 <- lm(sales ~ adverts, dat1)
+summary(mod1)
+```
+
+Before we draw any conclusions, let’s check the assumptions of the regression model!
+
+## Linearity of model: Residual plot
+\small
+Linearity: scatter plots of the standardized residual against the predicted values -- no curve-linear shape
+
+We can find residuals and predicted values from the output of lm(). It can be useful to add these directly to the original data set.
+```{r}
+dat1 <- dat1 %>% 
+    mutate(residuals = residuals(mod1),predicted = predict(mod1))
+```
+
+Plot the standarized residuals against predicted value with ggplot. Graph on next slide
+```{r,echo=TRUE,eval=FALSE}
+ggplot(dat1, aes(x = predicted, y = residuals)) + geom_point()
+```
+
+## Linearity of model: Residual plot
+
+The residual plot indicates that  the data is better represented by linear relationship.
+```{r,echo=FALSE,eval=TRUE,fig.height=4}
+ggplot(dat1, aes(x = predicted, y = residuals)) + geom_point()
+```
+
+## Normality of errors: Histogram
+
+Errors/Residuals are assumed to be normally distributed
+
+* First save the residuals
+
+* Then conduct histogram to examine the distribution of the residual 
+
+```{r,eval=FALSE,echo=TRUE}
+ggplot(dat1, aes(residuals)) + geom_histogram(bins = 30)
+```
+
+## Histogram
+* The residuals appeared normal.
+```{r,eval=TRUE,echo=FALSE,fig.height=5}
+ggplot(dat1, aes(residuals)) + geom_histogram(bins = 30)
+```
+
+## Histograms with Normal Overlay
+\small
+Sometimes we want to draw a normal distribution on top of a histogram with the same mean and standard deviation as the data.
+
+Unfortunately, the code for this is complicated. 
+```{r,eval=FALSE,echo=TRUE}
+ggplot(dat1) +
+geom_histogram(aes(x = residuals, y = ..density..), bins = 15) + 
+  stat_function(fun = dnorm,
+args = list(mean = mean(dat1$residuals), sd = sd(dat1$residuals)),
+color = "blue")
+```
+
+## Histograms with Normal Overlay
+
+```{r,eval=TRUE,echo=FALSE}
+ggplot(dat1) +
+geom_histogram(aes(x = residuals, y = ..density..), bins = 15) + stat_function(fun = dnorm,
+args = list(mean = mean(dat1$residuals), sd = sd(dat1$residuals)),
+color = "blue")
+```
+
+## Normality of errors: QQplot
+\small
+* QQ-plot compares the empirical cumulative distribution of a data set with a specified theoretical cumulative distribution
+
+* If the observations follow approximately a normal distribution, the resulting QQ-plot should lie (roughly ) on the diagonal line
+
+```{r,eval=FALSE}
+ggplot(dat1, aes(sample = residuals)) + 
+  stat_qq() + stat_qq_line()
+```
+
+## QQplot
+* The QQ plot confirms roughly normal.
+```{r,eval=TRUE,echo=FALSE,fig.height=5}
+ggplot(dat1, aes(sample = residuals)) + 
+  stat_qq() + stat_qq_line()
+```
+
+
+
+## Homoscedasticity of the Errors: Residuals Plot
+
+Homoscedasticity: Scatterplot of residuals against each predictor separately 
+
+* If no heteroscedasticity, then residuals scatter uniformly across x axis 
+* Examples of Heteroscedasticity: unequal width band
+  
+```{r,echo=TRUE,eval=FALSE}
+ggplot(dat1, aes(adverts, residuals)) + 
+  geom_point() + 
+  geom_smooth(method = loess, formula = y ~ x)
+```
+
+## Evaluting Homoscedasticity
+* The variance of the errors are rougly uniform across x axis.
+```{r,echo=FALSE,eval=TRUE,fig.height=5}
+ggplot(dat1, aes(adverts, residuals)) + 
+  geom_point() + 
+  geom_smooth(method = loess, formula = y ~ x)
+```
+
+
+## Outliers
+* Outlier: an observation point that is distant from other observations
+
+* Caused by:
+  + Data-entry errors
+  + Subject is not a member of the population for which the sample was intended
+  + The subject is just different
+  + And other unidentified reasons (hard to determine).
+  
+* Results: biased regression coefficients, R-squared and significance testing results
+
+## General Approach of Detecting Outliers
+
+* Boxplots can also alert you to possible univariate outliers
+
+* Visual inspection of scatter plots can alert you to possible univariate and multivariate outliers
+
+## Diagnostic statistics of Outlier
+\small
+* Multiple regression is **not** robust to outliers
+  + Stray data points that fall far from the swarm of points in the predictor space 
+  + Outcome y values that are unusual, given values of the predictors 
+
+* Three characteristics of data points: 
+  + **Leverage**: extent to which observation is close to or far from the rest of other observations, in terms of scores on the predictors only 
+  + **Distance**: extent to which the observation’s score on the outcome is extreme, given the values on the set of predictors 
+  + **Influence**: extent to which a single data point changes the outcome of the regression analysis 
+
+## Leverage
+* Leverage does not consider any information about the outcome 
+
+* Leverage reflects the distance of an observation from the centroid of the predictor space 
+
+* Leverage reflects the potential of the observation to affect the regression results 
+
+* Leverage statistics
+  + Leverage values range from 1/N to 1 
+  + Take a closer look at leverage values $> 3(p + 1)/N$
+  + $p$ is the number of predictors
+  + $N$ is the number of observations
+
+## Leverage
+Let’s use the airports example. In this example, we are working to predict the number of airports from total square miles and mean number of frost days.
+
+Leverage is looking at outliers in terms of the predictors only - are there unusual combinations of state area and mean frost days?
+
+```{r}
+dat2 <- read_sav("dat_states.sav")
+mod2 <- lm(Nairports ~ TotalSqMiles + MeanFrostDays, dat2)
+```
+
+For leverage values, we want to take a closer look at values greater than $3(p + 1)/N = 9/50 = .18$.
+```{r}
+leverage <- hatvalues(mod2)
+```
+
+## Leverage
+\small
+It can be difficult to visually identify individual values. Next, we pick out leverage values greater than the cutoff for each model.
+
+```{r}
+leverage[leverage > .18]
+```
+
+In mod1, the second row has the highest leverage. 
+
+```{r}
+dat2[2,1]
+```
+
+## Distance
+
+* Distance measures consider unusual values of the criterion given the predictors.
+
+* Measures of distance are based on the residuals 
+
+* Most commonly used distance is standardized residual ($z_y - z_{\hat{y}}$)
+
+* Suggested cutoff: if >2.5 in absolute values 
+
+## Distance
+
+For externally studentized residuals, we want to take a closer look at values greater than 2.5.
+```{r}
+distance <- rstudent(mod2)
+distance[distance > 2.5]
+```
+
+In mod1, the 9th and 32th row are identified as possible outliers.
+```{r}
+dat2[c(9,32),1]
+```
+
+## Influence
+Leverage and distance are useful for telling which observations are unusual relative to the other observations. Neither of these statistics necessarily means that the observation has high impact.
+Influence measures are most useful for this purpose:
+
+* DFFITS 
+* Cook’s Distance 
+
+## Influence
+
+\footnotesize
+
+Let's look at DFFITS first, which looks at the standardized change in predicted scores. We want to flag observations higher than $|2\sqrt{(p+1)/N} = 2\sqrt{.06} = .49|$ for large sample sizes, and higher than 1 for moderate sample sizes. I consider 50 to be closer to "moderate" than "large", but let's explore both cutoffs. 
+
+```{r}
+dffits <- dffits(mod2)
+```
+
+```{r}
+dffits[abs(dffits) > .49]
+```
+
+```{r}
+dat2[c(2,5,9,43),1]
+```
+The model flag Alaska, California, Florida, and Texas. 
+
+## Influence
+
+Next, let's apply Cook's distance, which looks at the standardized *squared* difference in predicted scores. Here, we use a cutoff of 1. 
+
+```{r}
+cook <- cooks.distance(mod2)
+```
+
+```{r}
+cook[cook > 1]
+```
+
+For the model, Alaska is an influence point.
+
+## Summary: Outliers
+* Diagnostics usually consider one observation at a time 
+* Use leverage, distance, and influence to examine multivariate outliers.
+* Examine these observations for data entry errors (or other errors unrelated to the study) 
+* Unless a strong case can be made for deleting the observation, the observation stays 
+
+```{r}
+dat2[2,]$State
+```
+

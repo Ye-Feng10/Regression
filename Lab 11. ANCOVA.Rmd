@@ -1,0 +1,263 @@
+---
+title: "Lab 11. ANCOVA"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+library(dplyr)
+opts_chunk$set(class.output='sh', comment = "",message = FALSE,warning = FALSE)
+```
+
+## Data for Today
+
+We want to study whether three groups (two intervention and one control) are different in their post-test math scores, controlling for pre-test math scores. 
+
+```{r}
+library(haven)
+library(tidyverse)
+dat <- read_sav("dat_mathtraining.sav")
+dat %>% glimpse
+```
+
+
+## Math Test
+
+* Y = Post-test math scores
+
+* C = Pre-test math scores (our covariate)
+
+The purpose is to rule out the influence of the covariate. In this example, the C is used to find the position the subjects originally are.
+
+* GROUP = Three treatment groups
+  + Intervention with new curriculum
+  + Intervention with new technology
+  + No Intervention (control)
+
+## Designate the Treatment Variables
+
+You can use either **dummy coding** or **effect coding**
+
+* If you use **dummy coding**, the intercept will be equal to the mean of Y of reference group; If you use **effect coding**, the intercept will be equal to the grand mean of Y
+
+* Dummy coding is as follows: 
+  + Intervention with new curriculum (T1=1, T2=0)
+  + Intervention with new technology (T1=0,T2=1)
+  + No Intervention (control) (T1=0, T2=0) 
+
+* Effect coding is as follows: 
+  + Intervention with new curriculum (T1=1, T2=0)
+  + Intervention with new technology (T1=0,T2=1)
+  + No Intervention (control) (T1=-1, T2=-1) 
+
+## Dummy code and Effect code in R
+
+::: columns
+:::: column
+
+* Dummy Coding
+```{r}
+contr.treatment(3)
+```
+
+::::
+:::: column
+
+* Effect Coding
+```{r}
+contr.sum(3)
+```
+
+::::
+:::
+
+
+
+
+
+## Create the Interaction Variables
+\footnotesize
+The assumptions for ANOVA:
+
+* All observations are independently sampled
+
+* Within each treatment group $j$, the distribution of the errors $e_{ij}$ is assumed normal
+
+* Homogeneity of error variance across groups
+
+* Independence of errors   
+
+Assumptions for ANCOVA:
+
+* All the assumptions for ANOVA
+
+*  Homogeneity of regression slopes: NO Interaction between factor(s) and covariate(s)
+  + Create variables for the interaction of the treatment and the covariate: $CT_1$ and $CT_2$
+  + **Test the interaction between covariate and predictors, and we would “prefer” non-significant results so ANCOVA can proceed (important!)**
+  
+* Linear relationship between the outcome and the covariate(s)
+
+## Determine the final model using regression model comparisons
+
+**Step 1**
+
+Does the interaction matter? Fit the regressions to see if the addition of the interaction term significantly changes the $R^2$.
+
+\[
+H_0: CT_j = 0 
+\]
+\[
+H_1 : CT_j \ne (j = 1,2)
+\]
+\[
+Full\ Model: Y = \beta_0 + \beta_1T_1 + \beta_2T_2 + \beta_3C + \boldsymbol{\beta_4CT_1} + \boldsymbol{\beta_5CT_2} + \varepsilon
+\]
+\[
+Reduced\ Model: Y = \beta_0 + \beta_1T_1 + \beta_2T_2 + \beta_3C + \varepsilon
+\]
+
+## Determine the final model using regression model comparisons
+
+**Step 2**
+
+Does the covariate matter? Fit the regressions to see if the addition of the covariate significantly changes the $R^2$.
+
+\[
+H_0: \beta_3 = 0 
+\]
+\[
+H_1 : \beta_3 \ne (j = 1,2)
+\]
+\[
+Full\ Model: Y = \beta_0 + \beta_1T_1 + \beta_2T_2 + \boldsymbol{\beta_3C} + \varepsilon
+\]
+\[
+Reduced\ Model: Y = \beta_0 + \beta_1T_1 + \beta_2T_2 + \varepsilon
+\]
+
+## Determine the final model using regression model comparisons
+
+**Step 3**
+
+Does the treatment matter? Fit the regressions to see if the treatment significantly changes the $R^2$.
+
+\[
+H_0: \beta_1 = \beta_2 = 0 
+\]
+\[
+H_1 : \beta_1 \ne \beta_2 \ne 0 (j = 1,2)
+\]
+\[
+Full\ Model: Y = \beta_0 + \beta_1T_1 + \beta_2T_2 + \beta_3C + \varepsilon
+\]
+\[
+Reduced\ Model: Y = \beta_0 + \beta_3C + \varepsilon
+\]
+
+## Step 1
+\footnotesize
+* Full Model: $Y = \beta_0 + \beta_1T_1 + \beta_2T_2 + \beta_3C + \boldsymbol{\beta_4CT_1} + \boldsymbol{\beta_5CT_2} + \varepsilon$
+
+```{r}
+mod1.f <- lm(Y ~ T1 + T2 + C + C*T1 + C*T2, dat)
+```
+
+* Reduced Model: $Y = \beta_0 + \beta_1T_1 + \beta_2T_2 + \beta_3C + \varepsilon$
+
+```{r}
+mod1.r <- lm(Y ~ T1 + T2 + C, dat)
+```
+
+* Test the interaction term
+
+```{r}
+anova(mod1.f,mod1.r)
+```
+
+Since the interaction of the treatment and the covariate does not significantly affect the outcome, **ANCOVA can proceed (important assumption!)**.
+
+## Step 2
+\footnotesize
+* Full Model: $Y = \beta_0 + \beta_1T_1 + \beta_2T_2 + \boldsymbol{\beta_3C} + \varepsilon$
+```{r}
+mod2.f <- lm(Y ~ T1 + T2 + C,dat)
+```
+
+* Reduced Model: $Y = \beta_0 + \beta_1T_1 + \beta_2T_2 + \varepsilon$
+```{r}
+mod2.r <- lm(Y ~ T1 + T2,dat)
+anova(mod2.f,mod2.r)
+```
+
+The covariate significantly affects the outcome, ANCOVA can proceed. If not significant, we can simply use multiple regression or ANOVA.
+
+## Step 3
+\footnotesize
+* Full Model: $Y = \beta_0 + \boldsymbol{\beta_1T_1} + \boldsymbol{\beta_2T_2} + \beta_3C + \varepsilon$
+
+* Reduced Model: $Y = \beta_0 + \beta_3C + \varepsilon$
+```{r}
+mod3.r <- lm(Y ~ C,dat)
+anova(mod2.f,mod3.r)
+```
+
+The treatment significantly affects the outcome, ANCOVA can proceed. 
+
+## What Do We Want to Find?
+
+We already find that there is significant treatment effect, more specifically, there are significant differences between means of treatment groups conditioned on the covariate. 
+
+```{r}
+coef(mod2.f)
+```
+* Final Model: $\hat{Y} = 4.377 + .899*C + 12.977*T_1 + 7.901*T_2$
+
+The next step is find which groups are different (post hoc)?
+
+* 1 VS 2; 2 VS 3; 1 VS 3
+
+## Pairwise Comparison Results
+\footnotesize
+Once you decide your final model, we can conduct ANCOVA with Post-hoc test with `emmeans_test` function from `rstatix` package.
+
+```{r}
+install.packages("rstatix")
+install.packages("emmeans")
+library(rstatix)
+library(emmeans)
+
+pwc <- dat %>% 
+  emmeans_test(
+    Y ~ GROUP, covariate = C,
+    p.adjust.method = "bonferroni"
+    )
+pwc
+```
+
+## Unadjusted Means and Adjusted Means
+\footnotesize
+* Unajusted Means
+```{r}
+dat %>% group_by(GROUP) %>% summarize(Mean = mean(Y))
+```
+
+* Adjusted Means
+```{r}
+get_emmeans(pwc)
+```
+
+## Conclusion
+
+* Intervention with new curriculum (1) > Intervention with new technology (2)
+ 
+* Intervention with new curriculum (2) > No intervention (3)
+
+* Intervention with new technology (1) > No intervention (3)
+

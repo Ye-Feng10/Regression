@@ -1,0 +1,303 @@
+---
+title: "Lab 12. Missing Data"
+author: "PSYC 7804"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include = FALSE}
+library(knitr)
+library(dplyr)
+opts_chunk$set(class.output='sh', comment = "",message = FALSE,warning = FALSE)
+```
+
+## Packges for Today (Install if Needed)
+
+```{r, message = FALSE}
+library(knitr)
+library(tidyverse)
+library(mice)
+library(Hmisc)
+```
+
+## Data for today
+
+We are going to impute missing values using a the `airquality` dataset.
+
+For the purpose of demonstration, we can manually impose some missing data into the dataset.
+```{r}
+data <- airquality
+data[4:10,3] <- rep(NA,7)
+data[1:5,4] <- NA
+head(data)
+```
+
+## Missing rate
+\small
+* The first step is to examing the missing rate. 
+
+* Usually a safe maximum threshold is 5% of the total for large datasets. We don't want to impute a variable if a large amount of the observations are missing. 
+
+* We can count how many missing observations in each variable:
+```{r}
+sapply(data,function(x) sum(is.na(x)))
+```
+
+* Or we can calculate the missing rate for each variable:
+```{r}
+sapply(data,function(x) sum(is.na(x))/length(x))
+```
+
+## Missing pattern
+\small
+We can also use the `mice::md.pattern()` function to check for the missing pattern.
+
+The output tells us that 104 samples are complete, 34 samples miss only the Ozone measurement, 4 samples miss only the Solar.R value and so on.
+
+```{r,out.width = "50%",out.height="50%", fig.align = "center"}
+md.pattern(data)
+```
+
+## Missing data mechanism
+
+* Missing Completely At Random
+  + The probability of missing data on a variable Y is unrelated to observed responses of other variables and is unrelated to the would-be values of Y itself.
+
+* Missing At Random
+  + The probability of missing data on a variable Y is related to observed responses of other variables but is unrelated to the would-be values of Y itself
+  + MAR is untestable
+
+* Missing Not at Random
+  + The probability of missing data on a variable Y is related to observed responses of other variables and is related to the would-be values of Y itself
+
+## Missing data handling methods
+
+* Deleting the observations or deleting the variable
+
+* Single Imputation Methods (Mean/Median/Mode imputation)
+
+* Likelihood Based Estimation (e.g. Full Maximum Likelihood Estimation)
+
+* Multiple Imputation
+
+## Testing for Missing Values
+\small
+* Missing data is coded as `NA` in r, the `is.na()` function in base R can help us detect missing data
+ + `is.na(x)` returns TRUE of x is missing
+
+```{r}
+a <- c(1,2,3,NA)
+is.na(a)
+```
+
+* Sometimes missing data are coded with numeric values (e.g. -99, -9999). Therefore, it is neccessary to recode missing values into `NA` in R
+
+```{r}
+a <- c(1,-99,2,3,-99,10,11,13,14)
+a
+a[a == -99] <- NA # recode -99 into NA
+a
+```
+
+## Detecting Missing Values
+\footnotesize
+To identify the location or the number of NAs we can leverage the `which()` and `sum()` functions:
+
+* identify location of NAs in vector
+
+```{r}
+which(is.na(a))
+```
+
+* identify count of NAs in data frame
+```{r}
+sum(is.na(a))
+```
+
+* For data frames, a convenient shortcut to compute the total missing values in each column is to use `colSums()`:
+
+```{r}
+colSums(is.na(data))
+```
+
+## Deleting the observations
+\footnotesize
+* If you have large number of observations in your dataset, then try deleting (or not to include missing values while model building) those observations (rows) that contain missing values. 
+
+The function `complete.cases()` returns a logical vector indicating which cases are complete.
+
+```{r}
+complete.cases(data)[1:20] # show first 20 rows
+```
+
+We can create a new dataset with only the rows that are complete
+
+```{r}
+delete1 <- data[complete.cases(data),]
+delete1 %>% glimpse
+```
+
+## Deleting the observations
+\small
+The function `na.omit()` returns the object with listwise deletion of missing values.
+
+```{r}
+delete2 <- na.omit(data)
+delete2 %>% glimpse
+```
+
+## Ingoring Missing Values in Analysis
+
+Most basic functions contain argument to ignore missing values (e.g. `na.rm = T`, `na.action = omit`)
+
+```{r}
+mean(data$Ozone)
+```
+
+```{r}
+mean(data$Ozone,na.rm = T)
+```
+
+```{r}
+cor(data$Ozone,data$Solar.R)
+```
+
+```{r}
+cor(data$Ozone,data$Solar.R,use = "complete.obs")
+```
+
+## Ingoring Missing Values in Analysis
+In `lm()` function, the missing observations will be deleted if `na.action = na.omit` is set (default in `lm()`)
+
+\tiny
+
+```{r}
+summary(lm(Temp ~ Ozone + Solar.R + Wind, 
+           data=data, na.action=na.omit))
+```
+
+## Deleting the Variable
+
+* If a paricular variable is having more missing values that rest of the variables in the dataset, and, if by removing that one variable you can save many observations, then you are better off without that variable unless it is a really important predictor that makes a lot of sense. 
+
+* It is a matter of deciding between the importance of the variable and losing out on a number of observations.
+
+## Single Impuataion Methods
+
+One of the traditional missing data methods is imputation with Mean (or Median/Mode)
+
+* Mean imputation replaces (imputes) missing values with the average of the available scores.
+
+* Variability and correlations are attenuated because imputations are constant.
+
+```{r}
+mean_imp <- data
+mean_imp$Ozone[is.na(mean_imp$Ozone)] <- 
+  mean(mean_imp$Ozone,na.rm = T)
+c(var(data$Ozone,na.rm = T),var(mean_imp$Ozone))
+```
+
+## Imputation with mean / median / mode
+
+The `Hmisc::impute()` function provide a simpler way to impuate missing data with mean/median/mode
+
+```{r}
+mean_imp2 <- data; median_imp <- data
+mean_imp2$Ozone <- 
+  impute(data$Ozone, mean)  # replace with mean
+median_imp$Ozone <- 
+  impute(data$Ozone, median)  # median
+c(var(data$Ozone,na.rm = T),var(mean_imp$Ozone),
+  var(mean_imp2$Ozone),var(median_imp$Ozone))
+```
+
+Imputation with mode is usually used with missing data in categorical variables, however, it is questionable whether it is a good choice.
+
+## Multiple Imputation
+
+* Multiple imputation using Multivariate Imputation by Chained Equations (MICE), or Fully conditional specification (FCS)
+
+* Different algorithmns can be applied in imputation phrase
+  +  Assume normal distribution: e.g Multiple imputation with Joint modeling
+  +  Non-normal distribution: e.g. Predictive Mean Matching (PMM), Classification and regression tree (CART)
+
+* We will use PMM for demonstration, other method can be found in the help page of `?mice`
+
+## Multiple imputation with PMM
+\footnotesize
+* The `mice()` function takes care of the imputing process
+  + `m=5` refers to the number of imputed datasets (default is 5)
+  + `method='pmm'` refers to the imputation method. In this case we are using predictive mean matching as imputation method.
+  
+```{r}
+imp_data <- mice(data,m=5,maxit=50,method='pmm',seed=500,printFlag = FALSE)
+summary(imp_data)
+```
+
+## Multiple imputation with PMM
+\footnotesize
+
+* We can check the imputation method used for each variable
+```{r}
+imp_data$method
+```
+
+* Check the imputed data, for example, e.g. variable `Ozone`:
+  +  The output shows the imputed data for each observation within each imputed dataset.
+```{r}
+imp_data$imp$Ozone
+```
+
+## Multiple imputation with PMM
+
+Now we can get back the completed dataset using the `complete()` function.
+
+```{r}
+completedata <- complete(imp_data,1)
+```
+
+The missing values have been replaced with the imputed values in the first of the five datasets. If you wish to use another one, just change the second parameter in the `complete()` function.
+
+## Inspecting the distribution of original and imputed data
+\footnotesize
+
+We can compare the distributions of original and imputated data with some useful plots.
+
+First, we can plot the Ozone against all the other continous variables (red: imputed observations, blue: original observations)
+```{r, fig.width=3,fig.height=3,fig.align = "center"}
+xyplot(imp_data,Ozone ~ Temp + Wind + Solar.R,pch=18,cex=1)
+```
+
+## Inspecting the distribution of original and imputed data
+\footnotesize
+We can also plot the density of original data and each imputed data. 
+```{r, fig.width=3,fig.height=3,fig.align = "center"}
+densityplot(imp_data)
+```
+
+## Pooling 
+\footnotesize
+
+To do analysis with the imputed data, `mice` can fit a model to each imputed dataset and then pool the results together.
+
+```{r}
+fit1 <- with(imp_data,lm(Temp ~ Ozone+Solar.R+Wind))
+summary(pool(fit1))
+```
+
+## Pooling
+\footnotesize
+
+Remember that we initialized the `mice` function with a specific `seed`, so that it allow us to get reproducible results everytime we re-run the codes. The seed value might affects the results if number of imputed dataset is very small. 
+
+To reduce this effect, we can impute a higher number of dataset:
+```{r}
+imp_data2 <- mice(data,m=50,seed=76029,printFlag = FALSE)
+fit2 <- with(imp_data2,lm(Temp~ Ozone+Solar.R+Wind))
+summary(pool(fit2))
+```

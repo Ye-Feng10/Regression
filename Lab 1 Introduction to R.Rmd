@@ -1,0 +1,510 @@
+---
+title: "Lab 1. Introduction to R"
+author: "PSYC7804 Regression"
+date: "Spring 2021"
+output: 
+  beamer_presentation:
+    theme: "Madrid"
+    colortheme: "beaver"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## R 
+1. Install R
+
+  * Go [https://cran.r-project.org/](https://cran.r-project.org/)
+  * Download R for Linux / (Mac) OS X / Windows
+  * Follow instructions under whatever link is appropriate for your computer
+
+2. Install RStudio
+  * Download RStudio from [https://www.rstudio.com/](https://www.rstudio.com/)
+  * FREE Download
+  * Choose appropriate installer for your computer
+
+## R markdown
+
+\small
+For full functionality, you will also want to install a \LaTeX\ distribution 
+
+tinytex installation within RStudio is the easiest option
+
+- Tools -> Install Packages
+- Type tinytex under “Packages” and make sure “install dependencies”
+is checked
+- Click “Install”
+
+```{r,  echo = TRUE, eval = FALSE}
+install.packages('tinytex')
+tinytex::install_tinytex()
+```
+
+- On Windows, also need Rtools installed: https://cran.r-project.org/bin/windows/Rtools/
+
+## R markdown
+
+Alternatives for overachievers:
+
+* Windows: MikTeX https://miktex.org/
+
+* Mac: MacTeX http://www.tug.org/mactex/
+
+## Your RStudio Window
+
+* Console: where R commands are run and where to find most R output
+* Enviroment: shows the objects that are in your working directory
+* R Script: where you will write and edit your R code
+* Files/Plots/Packages/Help: Plots appear in this panel and you can also browse local files and help pages here. 
+
+## R as a Calculator
+
+Try typing the following into your script document:
+```{r, echo = TRUE, eval = FALSE}
+4 * (9+2)
+```
+
+## Some things to know about R code
+
+- Spaces don’t matter: 2 + 3 and 2+3 are processed the same way
+```{r,echo = TRUE, eval = TRUE}
+2 + 3
+```
+
+
+```{r,echo = TRUE, eval = TRUE}
+2+3
+```
+
+- \textbf{Comments}  follow the pound/hash sign: `#` and can occur at the end of a line or on its own line
+
+```{r,echo = TRUE, eval = TRUE}
+2^6 # 2 to the 6th power
+```
+
+## Some things to know about R code
+
+Line breaks don’t matter, so long as R doesn’t think you’re at the end of the command
+```{r,echo = TRUE, eval = TRUE}
+# one command on two lines of code
+2+
+3
+```
+
+```{r,echo = TRUE, eval = TRUE}
+# two separate commands
+2
++3
+```
+
+## Help
+Two equivalent ways to get help on specific functions within R:
+```{r,echo = TRUE, eval = FALSE}
+?sum
+help(sum)
+```
+
+Google is your best friend
+
+- You will get better at googling R help with practice 
+- Try “R help . . . ” (e.g., “R help import SPSS data”)
+
+
+## Operators
+* Arithmetic Operators
+```{r,echo = TRUE, eval = FALSE}
+4+5 # additio
+5-2 # subtraction
+8*9 # multiplication
+4/2 # division
+2^3 # exponentiation
+2:8 # sequence from 2 to 8
+```
+
+## Operators
+
+Logical (T/F) operators
+
+- `<` less than; `>` greater than
+- `<=` less than or equal to; `>=` greater than or equal to
+- `==` equal to
+- `!=` not equal to 
+- `!x` not x
+- `x|y` x OR y
+- `x&y` x AND y
+
+Try the following code
+```{r, echo=TRUE,eval=FALSE}
+1:8
+(2 + 2) == 4
+1 >= 1
+1 > 1
+1 != 2
+```
+
+## Assignment
+One of the most important operators is the \textbf{assignment} operator: <- 
+  
+Assignment allows you to save an expression as an \textbf{object} in your
+\textbf{environment}.
+
+  * Object name goes on the left-hand side (can be anything beginning in a letter)
+  
+  
+  * Expression to save goes on the right-hand side
+
+Run the following code:
+```{r,echo=TRUE,eval=FALSE}  
+x <- 4 * (3 + 2) # does not produce any output in the console 
+```
+
+Notice that the object x now appears in your environment (upper right-hand
+panel)
+
+## Concatenation
+One of the most important R functions is the c() function 
+
+  * Technically, “concatenate”
+  * It might help to think of this as “collect” or “combine” 
+  * Creates a vector of information
+  
+```{r,echo=TRUE,eval=FALSE}
+x <- c(98, 76, 87, 92, 93, 96) 
+mean(x)
+```
+  
+Notice that the x object we defined earlier is now overwritten (and gone forever!) - \textbf{BE CAREFUL} never to overwrite anything important.
+
+## Object Types
+
+\begin{tabular}{ l l c }
+
+ Description & Object type & Appear in Environment \\ 
+ \hline
+ vector of numbers & numeric & num \\  
+ vector of floating-point numbers & double & dbl  \\
+ vector of integers & integer & int\\
+ vector of quoted text & character & chr \\
+ vector of TRUE/FALSE & logical & logi\\
+ vector of named factor levels & factor & fct\\
+ \hline
+\end{tabular}
+
+## Object Types and Useful Functions
+```{r,echo=TRUE,eval=TRUE}
+x <- 1:5
+class(x) # view the class of the object x
+```
+
+```{r,echo=TRUE,eval=TRUE}
+str(x) # view the structure of the object x
+```
+
+```{r,echo=TRUE,eval=TRUE}
+y <- c("Manhattan", "Bronx", "Brooklyn") 
+class(y)
+```
+
+```{r,echo=TRUE,eval=TRUE}
+length(y) # number of elements in object y
+```
+
+## Functions
+
+Working with data in R involves the use of functions. Functions are special commands programmed into the R environment that let you evaluate, change, or analyze data. 
+
+Functions are structured as `FunctionName(argument1 = value, argument2 = value...)`
+
+Two examples of simple functions are the **concatenate** function `c()` and the **mean** function `mean()`. 
+
+`c()` combines two or more values into a single variable.
+
+`mean()` takes the mean of two or more numeric values
+
+## Packages
+
+Sometimes R’s built-in functions (base R) are not enough
+
+  * packages are collections of functions, data sets, etc. contributed by R
+users
+  * Many packages are hosted on the comprehensive R archive network
+(CRAN): https://cran.r-project.org/web/packages/index.html
+  * You can click on the “Packages” tab (lower right-hand panel) to see packages you have installed
+  
+## Installing Packages
+
+Example: installing the tidyverse package:
+
+```{r,echo=TRUE,eval=FALSE}
+install.packages("tidyverse",dependencies = TRUE)
+```
+
+You can also install packages by searching for packages under “Install” in the “Packages” tab (lower right-hand panel)
+
+You only need to install packages once per machine, except after major software updates
+
+If your R version is outdated, you may get a warning message. Best to update R and RStudio regularly.
+
+## Loading Packages
+The library function loads in the package’s contents
+
+- Packages need to be loaded in every R session
+```{r,echo=TRUE,eval=FALSE}
+library(tidyverse)
+```
+
+This loads in a number of packages for “tidy” evaluation, which we’ll use soon
+
+## Working Directory
+To read in data or to save output, you want to set your \textbf{working directory}
+
+```{r,echo=TRUE,eval=FALSE}
+getwd()  # get the path for the current working directory
+```
+
+```{r,echo=TRUE,eval=FALSE}
+setwd("~/Desktop") # set a new working directory (Mac)
+```
+
+```{r,echo=TRUE,eval=FALSE}
+setwd("C:/Users/Ye/Desktop") # (Windows)
+```
+
+You can also set the working directory via point-and-click
+
+Session → Set Working Directory → Choose Directory
+
+But it’s better to put all commands into your final script (document everything)
+
+## Reading in Data
+The `readr` package (part of the tidyverse) can read in `csv` and similar files
+```{r,echo=FALSE,eval=TRUE,message=FALSE}
+library(readr)
+dat <- read_csv("mtcars.csv")
+```
+
+```{r,echo=TRUE,eval=FALSE}
+dat <- read_csv("mtcars.csv")
+```
+
+## Reading in Data
+Tab-delimited:
+```{r,echo=TRUE,eval=FALSE}
+dat <- read_delim("mtcars.txt", delim = "\t") 
+```
+
+Excel:
+```{r,echo=TRUE,eval=FALSE}
+library(readxl) # may need to install the readxl package 
+dat <- read_xlsx("mtcars.xlsx")
+# see also read_excel() and read_xls()
+```
+
+SPSS:
+```{r,echo=TRUE,eval=FALSE}
+library(haven) # you may need to install the haven package 
+dat <- read_sav("mtcars.sav")
+# see also read_stata(), read_sas()
+```
+
+Or use `import` function from `rio` package
+```{r,echo=TRUE,eval=FALSE}
+library(rio)
+import("mtcars.sav")
+```
+
+
+
+## Object Structures: Vectors
+
+A **vector** of values is defined using `c()`. Numeric, character, logical, etc. values can be concatenated into an object in this way, but the objects must be of the same type.
+
+```{r,echo=TRUE,eval=TRUE}
+v1 <- c(4, 2, 6, 3) # numeric vector
+v2 <- c(TRUE, FALSE, FALSE, TRUE) # logical vector
+v3 <- c("NY", "NJ", "CT") # character vector
+
+# mixed types
+v4 <- c(4, TRUE, "New York")
+str(v4) # everything converted to a character
+```
+
+## Object Structures: Matrices
+
+\small
+
+::: columns
+:::: column
+
+Values can also be organized into more complicated structures. Matrices arrange elements in two dimensions, rows and columns.
+
+```{r,echo=TRUE,eval=TRUE}
+mat1 <- matrix(1:6, 
+               nrow=3, ncol=2)
+mat1
+```
+
+::::
+:::: column
+
+By default, R fills in columns first. This can be changed by adding the argument `byrow = TRUE`
+```{r,echo=TRUE,eval=TRUE}
+matrix(1:6, nrow=3, 
+       ncol=2, byrow=TRUE)
+```
+
+As with vectors, matrices can include numeric, logic, character, etc. elements, so long as all elements are of the same type. 
+
+::::
+:::
+
+
+## Object Structures: data.frame
+
+A data frame is similar to a matrix except that instead of forcing every element to be the same class, data frames allow different columns to have different classes. 
+
+```{r,echo=TRUE,eval=TRUE}
+df <- data.frame(name = c("Abigail", "Ben", "Chloe", "Dan"),
+                 age = c(22, 25, 24, 31))
+df
+```
+
+## Data Frames and Matrices
+
+\small
+
+Sometimes it's useful to convert a matrix into a data frame. This can be done as follows:
+
+```{r,echo=TRUE,eval=TRUE}
+df1 <- as.data.frame(mat1)
+df1
+```
+
+Notice that R automatically adds column names `V1` and `V2` The column names can be modified as follows:
+
+```{r,echo=TRUE,eval=TRUE}
+colnames(df1) <- c("Item_1", "Item_2") # add new column names
+df1
+```
+
+## Data Frames and Matrices
+
+\small
+
+You can also convert a data frame to a matrix, but be careful! Remember that matrices must contain data all of the same type. For example:
+
+```{r,echo=TRUE,eval=TRUE}
+mat3 <- as.matrix(df)
+mat3  # notice that everything is in quotes 
+# numeric variable age has been converted to a character type
+str(mat3)
+```
+
+## Object Structures: Lists
+
+\small
+
+Another type of object that we use in this course is a list. Lists are similar to vectors except that the entries can be of any type, and there are no requirements that entries be of the same type. 
+
+```{r,echo=TRUE,eval=TRUE}
+l1 <- list(school = "Fordham University", yr_founded = 1841,
+           department = "Psychology", 
+           degree = c("BS", "MS", "PhD"),
+           enrollment = c(1582, 103, 26))
+str(l1)
+```
+
+
+## Subsetting
+
+It is possible to select only a subset of the elements from a vector, matrix, data frame, or list. Depending on the type of object, there are a few different ways to subset data.
+
+
+Single brackets are used to subset vectors:
+
+```{r,echo=TRUE,eval=TRUE}
+v1[1] # returns the first element of object v1
+v1[2] # returns the second element of object v1
+```
+
+## Subsetting
+
+\small
+
+Matrices and data frame can be subsetted by [row, column]
+
+```{r,echo=TRUE,eval=TRUE}
+mat1[1, 2] # returns the first row, second column of mat1
+mat1[, 1] # returns the first column of mat1
+mat1[2, ] # returns the second row of mat1
+df1[, 1] # returns the first column of df1
+df1[2, ] # returns the second row of df1
+```
+
+## Subsetting
+
+\footnotesize
+
+Data frame columns can also be retrieved by the column name using '$'
+
+```{r,echo=TRUE,eval=TRUE}
+df1$Item_1
+df1[, 1] # does the same thing as the previous line of code
+```
+
+Tidyverse commands are also very useful for subsetting data frames: 
+
+```{r,echo=TRUE,eval=TRUE,message = FALSE}
+library(tidyverse)
+df1 %>% select(Item_1)# subset columns
+df1 %>% filter(Item_1 == 2) # subset rows
+``` 
+
+## Subsetting
+
+Lists can be subsetted as follows:
+
+```{r,echo=TRUE,eval=TRUE}
+l1[2] # second element of l1 (list output)
+l1[[2]] # second element of l1 (numeric output)
+
+l1$department
+l1$enrollment
+```
+
+## Some useful functions
+
+\footnotesize
+
+There are several functions we can use to get quick snapshots or summaries of our data.
+```{r,echo=TRUE,eval=TRUE}
+head(dat)
+```
+
+```{r,echo=TRUE,eval=TRUE}
+nrow(dat)
+```
+
+```{r,echo=TRUE,eval=TRUE}
+ncol(dat)
+```
+
+## Some useful functions
+
+\footnotesize
+
+```{r,echo=TRUE,eval=TRUE}
+colnames(dat)
+```
+
+```{r,echo=TRUE,eval=TRUE}
+summary(dat)
+```
+
+
+## Acknowledgements
+
+I thank Dr.Leah Feuerstahler for generously providing materials for this class.
+
+
